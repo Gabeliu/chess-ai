@@ -217,12 +217,7 @@ function playTone(isCapture=false){
   if(isCapture){CAPTURE_AUDIO.currentTime=0;CAPTURE_AUDIO.play().catch(()=>{});return;}
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)(), now=ctx.currentTime;
-    const length=Math.floor(ctx.sampleRate*.055),buffer=ctx.createBuffer(1,length,ctx.sampleRate),data=buffer.getChannelData(0);
-    for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/(length*.16));
-    const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
-    source.buffer=buffer;filter.type="bandpass";filter.frequency.value=1050;filter.Q.value=.75;gain.gain.value=.16;
-    source.connect(filter);filter.connect(gain);gain.connect(ctx.destination);source.start(now);
-    const knock=ctx.createOscillator(),knockGain=ctx.createGain();knock.type="sine";knock.frequency.setValueAtTime(165,now);knock.frequency.exponentialRampToValueAtTime(105,now+.045);knockGain.gain.setValueAtTime(.055,now);knockGain.gain.exponentialRampToValueAtTime(.001,now+.05);knock.connect(knockGain);knockGain.connect(ctx.destination);knock.start(now);knock.stop(now+.05);
+    const pop=ctx.createOscillator(),gain=ctx.createGain();pop.type="sine";pop.frequency.setValueAtTime(520,now);pop.frequency.exponentialRampToValueAtTime(190,now+.045);gain.gain.setValueAtTime(.09,now);gain.gain.exponentialRampToValueAtTime(.001,now+.055);pop.connect(gain);gain.connect(ctx.destination);pop.start(now);pop.stop(now+.055);
   }catch{}
 }
 function playOutcomeSound(result){

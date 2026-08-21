@@ -121,6 +121,14 @@ function gameResult(pos) {
   return null;
 }
 
+function resultDisplay(result) {
+  if (!result?.winner) return result;
+  const winner = state.mode === "ai"
+    ? (result.winner === "w" ? "You" : "Local AI")
+    : (result.winner === "w" ? "Player 1" : "Player 2");
+  return { title: winner + " wins", text: "Checkmate" };
+}
+
 function evaluate(pos) {
   let score = 0;
   pos.board.forEach((p, i) => { if (!p) return; const [r,c]=rc(i), center = (3.5-Math.abs(3.5-r))+(3.5-Math.abs(3.5-c)); const activity = p.type === "p" ? (p.color === "w" ? 6-r : r-1)*7 : (p.type === "n" || p.type === "b" ? center*5 : 0); score += (p.color === "b" ? 1 : -1) * (VALUES[p.type]+activity); });
@@ -184,9 +192,9 @@ function renderHistory() {
 }
 
 function render() {
-  renderBoard(); renderHistory(); const result=gameResult(state), check=inCheck(state,state.turn);
-  $("statusTitle").textContent=result?.title || (state.busy?"AI is thinking":check?"Check":state.mode==="ai"&&state.turn==="w"?"Your move":colorName(state.turn)+" to move");
-  $("statusText").textContent=result?.text || (check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
+  renderBoard(); renderHistory(); const result=gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
+  $("statusTitle").textContent=displayResult?.title || (state.busy?"AI is thinking":check?"Check":state.mode==="ai"&&state.turn==="w"?"Your move":colorName(state.turn)+" to move");
+  $("statusText").textContent=displayResult?.text || (check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
   $("whiteTurn").classList.toggle("active",state.turn==="w"&&!state.over); $("blackTurn").classList.toggle("active",state.turn==="b"&&!state.over);
   $("moveCount").textContent=state.history.length+` played`; $("undoButton").disabled=!state.history.length||state.busy;
   const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>GLYPHS.b[h.captured.type]).join(""); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>GLYPHS.w[h.captured.type]).join("");

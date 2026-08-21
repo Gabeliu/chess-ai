@@ -5,6 +5,12 @@ const GLYPHS = { w: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
 const VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 const FILES = "abcdefgh";
 const START = ["br","bn","bb","bq","bk","bb","bn","br","bp","bp","bp","bp","bp","bp","bp","bp",...Array(32).fill(null),"wp","wp","wp","wp","wp","wp","wp","wp","wr","wn","wb","wq","wk","wb","wn","wr"];
+const OUTCOME_AUDIO = {
+  player1: new Audio("assets/audio/player-1-wins.mp3"),
+  player2: new Audio("assets/audio/player-2-wins.mp3"),
+  youWin: new Audio("assets/audio/you-win.wav"),
+  aiWins: new Audio("assets/audio/downer-noise.mp3")
+};
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, flipped: false, busy: false, over: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
@@ -108,7 +114,7 @@ function notation(before, move, after, promotion = "q") {
 function positionKey(pos) { return pos.board.map(p => p ? p.color+p.type : "--").join("") + pos.turn + JSON.stringify(pos.castling) + pos.enPassant; }
 function recordPosition() { const key = positionKey(state); state.positions.set(key, (state.positions.get(key)||0)+1); }
 function gameResult(pos) {
-  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { title: "Checkmate", text: colorName(opposite(pos.turn)) + " wins" } : { title: "Draw", text: "Stalemate" };
+  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { title: "Checkmate", text: colorName(opposite(pos.turn)) + " wins", winner: opposite(pos.turn) } : { title: "Draw", text: "Stalemate" };
   if (pos.halfmove >= 100) return { title: "Draw", text: "Fifty-move rule" };
   if ((state.positions.get(positionKey(pos))||0) >= 3) return { title: "Draw", text: "Threefold repetition" };
   const material = pos.board.filter(Boolean); if (material.every(p => p.type === "k" || p.type === "b" || p.type === "n") && material.length <= 3) return { title: "Draw", text: "Insufficient material" };
@@ -137,8 +143,9 @@ function commitMove(move, promotion = "q") {
   const snapshot = { ...clonePosition(state), history: state.history.map(h => ({...h})), lastMove: state.lastMove, positions: new Map(state.positions) };
   const before = clonePosition(state), after = applyMove(state, move, promotion);
   Object.assign(state, after); state.history.push({ snapshot, notation: notation(before,move,after,promotion), color: before.turn, captured: move.capture || null });
-  state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition(); playTone(!!move.capture || move.enPassant);
-  const result=gameResult(state); if(result) state.over=true;
+  state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition();
+  const result=gameResult(state);
+  if(result){state.over=true;playOutcomeSound(result);}else playTone(!!move.capture || move.enPassant);
   render();
   if (state.mode === "ai" && state.turn === "b" && !state.over) { state.busy=true; render(); setTimeout(() => { const aiMove=chooseAiMove(); state.busy=false; if(aiMove) commitMove(aiMove); }, 260); }
 }
@@ -200,7 +207,17 @@ function playTone(isCapture=false){
     else note(state.turn==="w"?320:260,0,.08,.035);
   }catch{}
 }
-function setMode(mode){state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";$("opponentName").textContent=mode==="ai"?"Local AI":"Player two";resetGame();}
+function playOutcomeSound(result){
+  if(!state.sound||!result.winner)return;
+  const key=state.mode==="ai"?(result.winner==="w"?"youWin":"aiWins"):(result.winner==="w"?"player1":"player2"),audio=OUTCOME_AUDIO[key];
+  audio.currentTime=0;
+  audio.play().catch(()=>{});
+}
+function setMode(mode){
+  state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
+  $("playerName").textContent=mode==="ai"?"You":"Player 1";$("opponentName").textContent=mode==="ai"?"Local AI":"Player 2";$("opponentDetail").textContent=mode==="ai"?`Level ${state.depth} · Black`:"Black";
+  resetGame();
+}
 
 $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
 $("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];$("opponentDetail").textContent=`Level ${state.depth} · Black`;};

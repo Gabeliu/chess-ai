@@ -13,6 +13,7 @@ Open `index.html` in a modern browser. Choose **Vs AI** or **Two players**, then
 - Castling, en passant, and promotion
 - Check, checkmate, stalemate, repetition, fifty-move, and insufficient-material detection
 - Undo, board flip, captures, and algebraic move history
+- Separate win and loss audio for AI and two-player games
 - Responsive desktop and mobile layout
 - No dependencies, build step, cookies, analytics, or network requests
 

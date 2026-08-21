@@ -215,7 +215,8 @@ function playOutcomeSound(result){
 }
 function setMode(mode){
   state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
-  $("playerName").textContent=mode==="ai"?"You":"Player 1";$("opponentName").textContent=mode==="ai"?"Local AI":"Player 2";$("opponentDetail").textContent=mode==="ai"?`Level ${state.depth} · Black`:"Black";
+  $("playerName").textContent=mode==="ai"?"You":"Player 1";$("playerAvatar").textContent=mode==="ai"?"YOU":"P1";
+  $("opponentName").textContent=mode==="ai"?"Local AI":"Player 2";$("opponentAvatar").textContent=mode==="ai"?"QK":"P2";$("opponentDetail").textContent=mode==="ai"?`Level ${state.depth} · Black`:"Black";
   resetGame();
 }
 

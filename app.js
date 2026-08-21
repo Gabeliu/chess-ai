@@ -15,6 +15,7 @@ const CAPTURE_AUDIO = new Audio("assets/audio/capture-nom-nom.mp3");
 const CHECK_AUDIO = new Audio("assets/audio/check-alarm.mp3");
 CHECK_AUDIO.volume = 0.3;
 let checkAudioTimer = null;
+let aiTimer = null;
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, flipped: false, busy: false, over: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
@@ -28,6 +29,9 @@ function squareName(i) { const [r, c] = rc(i); return FILES[c] + (8 - r); }
 function opposite(c) { return c === "w" ? "b" : "w"; }
 
 function resetGame() {
+  if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+  if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}
+  [CAPTURE_AUDIO,CHECK_AUDIO,...Object.values(OUTCOME_AUDIO)].forEach(audio=>{audio.pause();audio.currentTime=0;});
   state.board = START.map(code => code ? { color: code[0], type: code[1] } : null);
   Object.assign(state, { turn: "w", selected: null, legal: [], history: [], lastMove: null, busy: false, over: false, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() });
   recordPosition(); render();
@@ -161,7 +165,7 @@ function commitMove(move, promotion = "q") {
   else if(inCheck(state,state.turn))playCheckSound();
   else playTone(!!move.capture || move.enPassant);
   render();
-  if (state.mode === "ai" && state.turn === "b" && !state.over) { state.busy=true; render(); setTimeout(() => { const aiMove=chooseAiMove(); state.busy=false; if(aiMove) commitMove(aiMove); }, 260); }
+  if (state.mode === "ai" && state.turn === "b" && !state.over) { state.busy=true; render(); aiTimer=setTimeout(() => { aiTimer=null; const aiMove=chooseAiMove(); state.busy=false; if(aiMove) commitMove(aiMove); }, 260); }
 }
 
 function handleSquare(index) {
@@ -239,6 +243,6 @@ function setMode(mode){
   resetGame();
 }
 
-$("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
+$("brandHome").onclick=(event)=>{event.preventDefault();resetGame();}; $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
 $("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];$("opponentDetail").textContent=`Level ${state.depth} · Black`;};
 resetGame();

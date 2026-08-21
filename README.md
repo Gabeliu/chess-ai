@@ -4,7 +4,7 @@ A polished, dependency-free chess game with a fully local AI opponent. It needs 
 
 ## Play
 
-Open `index.html` in a modern browser. Choose **Vs AI** or **Two players**, then click a piece and a highlighted destination square.
+[Play Quiet Knight](https://gabeliu.github.io/chess-ai/)
 
 ## Features
 

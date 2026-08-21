@@ -53,7 +53,7 @@ button { color: inherit; }
 .square { position: relative; border: 0; border-radius: 0; padding: 0; display: grid; place-items: center; cursor: pointer; overflow: hidden; }
 .square.light { background: var(--board-light); }
 .square.dark { background: var(--board-dark); }
-.square:hover::after { content: ""; position: absolute; inset: 0; background: #ffffff14; }
+.square:hover { filter: brightness(1.06); }
 .square.selected { box-shadow: inset 0 0 0 5px #d7f171b8; }
 .square.last-move::before { content: ""; position: absolute; inset: 0; background: #d7f1714f; }
 .square.in-check { box-shadow: inset 0 0 0 5px var(--danger); }

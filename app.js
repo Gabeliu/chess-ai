@@ -13,6 +13,7 @@ const OUTCOME_AUDIO = {
 };
 const CAPTURE_AUDIO = new Audio("assets/audio/capture-nom-nom.mp3");
 const CHECK_AUDIO = new Audio("assets/audio/check-alarm.mp3");
+CHECK_AUDIO.volume = 0.3;
 let checkAudioTimer = null;
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, flipped: false, busy: false, over: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };

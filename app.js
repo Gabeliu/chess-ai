@@ -137,7 +137,7 @@ function commitMove(move, promotion = "q") {
   const snapshot = { ...clonePosition(state), history: state.history.map(h => ({...h})), lastMove: state.lastMove, positions: new Map(state.positions) };
   const before = clonePosition(state), after = applyMove(state, move, promotion);
   Object.assign(state, after); state.history.push({ snapshot, notation: notation(before,move,after,promotion), color: before.turn, captured: move.capture || null });
-  state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition(); playTone();
+  state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition(); playTone(!!move.capture || move.enPassant);
   const result=gameResult(state); if(result) state.over=true;
   render();
   if (state.mode === "ai" && state.turn === "b" && !state.over) { state.busy=true; render(); setTimeout(() => { const aiMove=chooseAiMove(); state.busy=false; if(aiMove) commitMove(aiMove); }, 260); }
@@ -191,7 +191,15 @@ function undo() {
   while(steps--&&state.history.length){snap=state.history[state.history.length-1].snapshot;Object.assign(state,clonePosition(snap),{history:snap.history.map(h=>({...h})),lastMove:snap.lastMove,positions:new Map(snap.positions),selected:null,legal:[],over:false});}
   render();
 }
-function playTone(){if(!state.sound)return;try{const ctx=new(window.AudioContext||window.webkitAudioContext)(),o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=state.turn==="w"?320:260;g.gain.setValueAtTime(.035,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.08);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.08);}catch{} }
+function playTone(isCapture=false){
+  if(!state.sound)return;
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)(), now=ctx.currentTime;
+    const note=(frequency,start,duration,volume,type="sine")=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(frequency,now+start);g.gain.setValueAtTime(volume,now+start);g.gain.exponentialRampToValueAtTime(.001,now+start+duration);o.connect(g);g.connect(ctx.destination);o.start(now+start);o.stop(now+start+duration);};
+    if(isCapture){note(185,0,.11,.075,"triangle");note(115,.045,.16,.065,"square");}
+    else note(state.turn==="w"?320:260,0,.08,.035);
+  }catch{}
+}
 function setMode(mode){state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";$("opponentName").textContent=mode==="ai"?"Local AI":"Player two";resetGame();}
 
 $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};

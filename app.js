@@ -1,6 +1,7 @@
 "use strict";
 
-const GLYPHS = { w: { k: "♔", q: "♕", r: "♖", b: "♗", n: "♘", p: "♙" }, b: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" } };
+// Solid silhouettes stay legible at small sizes; color and outline distinguish sides.
+const GLYPHS = { w: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" }, b: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" } };
 const VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 const FILES = "abcdefgh";
 const START = ["br","bn","bb","bq","bk","bb","bn","br","bp","bp","bp","bp","bp","bp","bp","bp",...Array(32).fill(null),"wp","wp","wp","wp","wp","wp","wp","wp","wr","wn","wb","wq","wk","wb","wn","wr"];

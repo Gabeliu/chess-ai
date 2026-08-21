@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151716">
+  <title>Quiet Knight - Local Chess</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Quiet Knight home">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span>Quiet Knight</span>
+      </a>
+      <div class="top-actions">
+        <span class="offline-badge"><span></span> Local engine</span>
+        <button class="icon-button" id="soundButton" title="Toggle sound" aria-label="Toggle sound">♪</button>
+      </div>
+    </header>
+
+    <section class="game-layout">
+      <div class="board-column">
+        <div class="player-strip opponent">
+          <div class="avatar dark-avatar">QK</div>
+          <div class="player-info"><strong id="opponentName">Local AI</strong><span id="opponentDetail">Level 2 · Black</span></div>
+          <div class="captured" id="blackCaptured" aria-label="Pieces captured by black"></div>
+          <div class="turn-dot" id="blackTurn" aria-label="Black to move"></div>
+        </div>
+
+        <div class="board-wrap">
+          <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+          <div class="promotion-dialog" id="promotionDialog" hidden>
+            <p>Promote pawn</p>
+            <div id="promotionChoices"></div>
+          </div>
+        </div>
+
+        <div class="player-strip">
+          <div class="avatar light-avatar">YOU</div>
+          <div class="player-info"><strong id="playerName">You</strong><span id="playerDetail">White</span></div>
+          <div class="captured" id="whiteCaptured" aria-label="Pieces captured by white"></div>
+          <div class="turn-dot active" id="whiteTurn" aria-label="White to move"></div>
+        </div>
+      </div>
+
+      <aside class="control-panel">
+        <div class="status-block">
+          <span class="eyebrow">CURRENT GAME</span>
+          <h1 id="statusTitle">Your move</h1>
+          <p id="statusText">White to move</p>
+        </div>
+
+        <div class="mode-tabs" role="tablist" aria-label="Game mode">
+          <button class="mode-tab active" id="aiMode" role="tab" aria-selected="true">Vs AI</button>
+          <button class="mode-tab" id="localMode" role="tab" aria-selected="false">Two players</button>
+        </div>
+
+        <div class="setting" id="difficultySetting">
+          <div class="setting-heading"><label for="difficulty">AI strength</label><output id="difficultyLabel">Balanced</output></div>
+          <input id="difficulty" type="range" min="1" max="3" value="2" step="1">
+          <div class="range-labels"><span>Casual</span><span>Sharp</span></div>
+        </div>
+
+        <div class="move-section">
+          <div class="section-heading"><span>Moves</span><span id="moveCount">0 played</span></div>
+          <div class="move-list empty" id="moveList"><span>Your game record will appear here.</span></div>
+        </div>
+
+        <div class="game-actions">
+          <button class="primary-button" id="newGameButton"><span aria-hidden="true">↻</span> New game</button>
+          <button class="secondary-button" id="undoButton" disabled title="Undo last turn"><span aria-hidden="true">↶</span> Undo</button>
+          <button class="icon-button bordered" id="flipButton" title="Flip board" aria-label="Flip board">⇅</button>
+        </div>
+
+        <p class="privacy-note">No account. No API key. Every move stays on this device.</p>
+      </aside>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

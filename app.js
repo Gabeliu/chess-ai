@@ -11,6 +11,7 @@ const OUTCOME_AUDIO = {
   youWin: new Audio("assets/audio/you-win.wav"),
   aiWins: new Audio("assets/audio/downer-noise.mp3")
 };
+const CAPTURE_AUDIO = new Audio("assets/audio/capture-nom-nom.mp3");
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, flipped: false, busy: false, over: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
@@ -208,11 +209,11 @@ function undo() {
 }
 function playTone(isCapture=false){
   if(!state.sound)return;
+  if(isCapture){CAPTURE_AUDIO.currentTime=0;CAPTURE_AUDIO.play().catch(()=>{});return;}
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)(), now=ctx.currentTime;
     const note=(frequency,start,duration,volume,type="sine")=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(frequency,now+start);g.gain.setValueAtTime(volume,now+start);g.gain.exponentialRampToValueAtTime(.001,now+start+duration);o.connect(g);g.connect(ctx.destination);o.start(now+start);o.stop(now+start+duration);};
-    if(isCapture){note(185,0,.11,.075,"triangle");note(115,.045,.16,.065,"square");}
-    else note(state.turn==="w"?320:260,0,.08,.035);
+    note(state.turn==="w"?320:260,0,.08,.035);
   }catch{}
 }
 function playOutcomeSound(result){

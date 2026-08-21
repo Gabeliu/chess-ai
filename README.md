@@ -14,6 +14,7 @@ Open `index.html` in a modern browser. Choose **Vs AI** or **Two players**, then
 - Check, checkmate, stalemate, repetition, fifty-move, and insufficient-material detection
 - Undo, board flip, captures, and algebraic move history
 - Separate win and loss audio for AI and two-player games
+- A single-pulse warning alarm when a move puts the king in check
 - Responsive desktop and mobile layout
 - No dependencies, build step, cookies, analytics, or network requests
 

@@ -23,7 +23,7 @@
     <section class="game-layout">
       <div class="board-column">
         <div class="player-strip opponent">
-          <div class="avatar dark-avatar">QK</div>
+          <div class="avatar dark-avatar" id="opponentAvatar">QK</div>
           <div class="player-info"><strong id="opponentName">Local AI</strong><span id="opponentDetail">Level 2 · Black</span></div>
           <div class="captured" id="blackCaptured" aria-label="Pieces captured by black"></div>
           <div class="turn-dot" id="blackTurn" aria-label="Black to move"></div>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="player-strip">
-          <div class="avatar light-avatar">YOU</div>
+          <div class="avatar light-avatar" id="playerAvatar">YOU</div>
           <div class="player-info"><strong id="playerName">You</strong><span id="playerDetail">White</span></div>
           <div class="captured" id="whiteCaptured" aria-label="Pieces captured by white"></div>
           <div class="turn-dot active" id="whiteTurn" aria-label="White to move"></div>

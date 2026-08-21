@@ -2,3 +2,6 @@
 Thumbs.db
 *.log
 preview.png
+mobile-preview.png
+.edge-test/
+.edge-mobile/

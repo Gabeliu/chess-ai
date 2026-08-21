@@ -9,6 +9,8 @@ A polished, dependency-free chess game with a fully local AI opponent. It needs 
 ## Features
 
 - Local minimax AI with three difficulty levels
+- Play as White, Black, or a randomly selected side against the AI
+- 1+0, 3+2, 10+0, and unlimited time controls
 - Complete legal move validation
 - Castling, en passant, and promotion
 - Check, checkmate, stalemate, repetition, fifty-move, and insufficient-material detection

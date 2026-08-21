@@ -14,10 +14,12 @@ const OUTCOME_AUDIO = {
 const CAPTURE_AUDIO = new Audio("assets/audio/capture-nom-nom.mp3");
 const CHECK_AUDIO = new Audio("assets/audio/check-alarm.mp3");
 CHECK_AUDIO.volume = 0.3;
+const CLOCKS = { bullet: { seconds: 60, increment: 0 }, blitz: { seconds: 180, increment: 2 }, rapid: { seconds: 600, increment: 0 }, unlimited: { seconds: null, increment: 0 } };
 let checkAudioTimer = null;
 let aiTimer = null;
+let clockTimer = null;
 
-const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, flipped: false, busy: false, over: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
+const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
 
 function clonePosition(s) { return { board: s.board.map(p => p ? { ...p } : null), turn: s.turn, enPassant: s.enPassant, castling: { ...s.castling }, halfmove: s.halfmove }; }
@@ -31,10 +33,23 @@ function opposite(c) { return c === "w" ? "b" : "w"; }
 function resetGame() {
   if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
   if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}
+  if(clockTimer){clearInterval(clockTimer);clockTimer=null;}
   [CAPTURE_AUDIO,CHECK_AUDIO,...Object.values(OUTCOME_AUDIO)].forEach(audio=>{try{audio.pause();if(audio.readyState>0)audio.currentTime=0;}catch{}});
+  state.playerColor=state.mode==="ai"?(state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice):"w";
+  state.flipped=state.mode==="ai"&&state.playerColor==="b";
+  const clock=CLOCKS[state.clockChoice];state.clocks={w:clock.seconds,b:clock.seconds};state.lastTick=clock.seconds===null?null:performance.now();
   state.board = START.map(code => code ? { color: code[0], type: code[1] } : null);
-  Object.assign(state, { turn: "w", selected: null, legal: [], history: [], lastMove: null, busy: false, over: false, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() });
-  recordPosition(); render();
+  Object.assign(state, { turn: "w", selected: null, legal: [], history: [], lastMove: null, busy: false, over: false, outcome: null, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() });
+  applyPlayerLabels();recordPosition();render();startClock();if(isAiTurn())scheduleAiMove();
+}
+
+function isAiTurn(){return state.mode==="ai"&&state.turn!==state.playerColor;}
+function scheduleAiMove(){if(state.over||!isAiTurn())return;state.busy=true;render();aiTimer=setTimeout(()=>{aiTimer=null;updateClock();if(state.over)return;const aiMove=chooseAiMove();state.busy=false;if(aiMove)commitMove(aiMove);},260);}
+function startClock(){if(state.clocks.w===null)return;clockTimer=setInterval(()=>{updateClock();renderClocks();},200);}
+function updateClock(){
+  if(state.lastTick===null||state.over)return;
+  const now=performance.now(),elapsed=(now-state.lastTick)/1000;state.lastTick=now;state.clocks[state.turn]=Math.max(0,state.clocks[state.turn]-elapsed);
+  if(state.clocks[state.turn]<=0){state.outcome={title:"Time",text:"Time expired",winner:opposite(state.turn)};state.over=true;state.busy=false;if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}if(clockTimer){clearInterval(clockTimer);clockTimer=null;}playOutcomeSound(state.outcome);render();}
 }
 
 function attacksSquare(pos, from, target) {
@@ -122,7 +137,7 @@ function notation(before, move, after, promotion = "q") {
 function positionKey(pos) { return pos.board.map(p => p ? p.color+p.type : "--").join("") + pos.turn + JSON.stringify(pos.castling) + pos.enPassant; }
 function recordPosition() { const key = positionKey(state); state.positions.set(key, (state.positions.get(key)||0)+1); }
 function gameResult(pos) {
-  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { title: "Checkmate", text: colorName(opposite(pos.turn)) + " wins", winner: opposite(pos.turn) } : { title: "Draw", text: "Stalemate" };
+  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { title: "Checkmate", text: "Checkmate", winner: opposite(pos.turn) } : { title: "Draw", text: "Stalemate" };
   if (pos.halfmove >= 100) return { title: "Draw", text: "Fifty-move rule" };
   if ((state.positions.get(positionKey(pos))||0) >= 3) return { title: "Draw", text: "Threefold repetition" };
   const material = pos.board.filter(Boolean); if (material.every(p => p.type === "k" || p.type === "b" || p.type === "n") && material.length <= 3) return { title: "Draw", text: "Insufficient material" };
@@ -132,9 +147,9 @@ function gameResult(pos) {
 function resultDisplay(result) {
   if (!result?.winner) return result;
   const winner = state.mode === "ai"
-    ? (result.winner === "w" ? "You" : "Local AI")
+    ? (result.winner === state.playerColor ? "You" : "Local AI")
     : (result.winner === "w" ? "Player 1" : "Player 2");
-  return { title: winner + " wins", text: "Checkmate" };
+  return { title: winner + " wins", text: result.text };
 }
 
 function evaluate(pos) {
@@ -150,26 +165,28 @@ function search(pos, depth, alpha, beta) {
   let best=Infinity; for (const m of moves) { best=Math.min(best,search(applyMove(pos,m),depth-1,alpha,beta)); beta=Math.min(beta,best); if(beta<=alpha)break; } return best;
 }
 function chooseAiMove() {
-  const moves = legalMoves(state); let best=-Infinity, choices=[];
-  for (const move of moves) { const score=search(applyMove(state,move),state.depth-1,-Infinity,Infinity)+(Math.random()*8-4); if(score>best){best=score;choices=[move];}else if(score===best)choices.push(move); }
+  const moves = legalMoves(state),maximizing=state.turn==="b";let best=maximizing?-Infinity:Infinity,choices=[];
+  for (const move of moves) { const score=search(applyMove(state,move),state.depth-1,-Infinity,Infinity)+(Math.random()*8-4),better=maximizing?score>best:score<best;if(better){best=score;choices=[move];}else if(score===best)choices.push(move); }
   return choices[Math.floor(Math.random()*choices.length)];
 }
 
 function commitMove(move, promotion = "q") {
-  const snapshot = { ...clonePosition(state), history: state.history.map(h => ({...h})), lastMove: state.lastMove, positions: new Map(state.positions) };
+  updateClock();if(state.over)return;
+  const snapshot = { ...clonePosition(state), history: state.history.map(h => ({...h})), lastMove: state.lastMove, positions: new Map(state.positions), clocks: { ...state.clocks } };
   const before = clonePosition(state), after = applyMove(state, move, promotion);
   Object.assign(state, after); state.history.push({ snapshot, notation: notation(before,move,after,promotion), color: before.turn, captured: move.capture || null });
   state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition();
+  if(state.clocks[before.turn]!==null)state.clocks[before.turn]+=CLOCKS[state.clockChoice].increment;state.lastTick=state.clocks.w===null?null:performance.now();
   const result=gameResult(state);
-  if(result){state.over=true;playOutcomeSound(result);}
+  if(result){state.outcome=result;state.over=true;if(clockTimer){clearInterval(clockTimer);clockTimer=null;}playOutcomeSound(result);}
   else if(inCheck(state,state.turn))playCheckSound();
   else playTone(!!move.capture || move.enPassant);
   render();
-  if (state.mode === "ai" && state.turn === "b" && !state.over) { state.busy=true; render(); aiTimer=setTimeout(() => { aiTimer=null; const aiMove=chooseAiMove(); state.busy=false; if(aiMove) commitMove(aiMove); }, 260); }
+  if(isAiTurn()&&!state.over)scheduleAiMove();
 }
 
 function handleSquare(index) {
-  if (state.busy || state.over || (state.mode === "ai" && state.turn === "b")) return;
+  if (state.busy || state.over || isAiTurn()) return;
   const targetMove=state.legal.find(m=>m.to===index);
   if(targetMove){ if(targetMove.promotion){ showPromotion(targetMove); return; } commitMove(targetMove); return; }
   if(state.board[index]?.color===state.turn){ state.selected=index; state.legal=legalMoves(state).filter(m=>m.from===index); } else { state.selected=null; state.legal=[]; }
@@ -202,19 +219,27 @@ function renderHistory() {
 }
 
 function render() {
-  renderBoard(); renderHistory(); const result=gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
-  $("statusTitle").textContent=displayResult?.title || (state.busy?"AI is thinking":check?"Check":state.mode==="ai"&&state.turn==="w"?"Your move":colorName(state.turn)+" to move");
+  renderBoard(); renderHistory(); renderClocks(); const result=state.outcome||gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
+  $("statusTitle").textContent=displayResult?.title || (state.busy?"AI is thinking":check?"Check":state.mode==="ai"&&state.turn===state.playerColor?"Your move":colorName(state.turn)+" to move");
   $("statusText").textContent=displayResult?.text || (check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
-  $("whiteTurn").classList.toggle("active",state.turn==="w"&&!state.over); $("blackTurn").classList.toggle("active",state.turn==="b"&&!state.over);
+  const bottomColor=state.mode==="ai"?state.playerColor:"w",topColor=opposite(bottomColor);
+  $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",colorName(bottomColor)+" to move");
+  $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",colorName(topColor)+" to move");
   $("moveCount").textContent=state.history.length+` played`; $("undoButton").disabled=!state.history.length||state.busy;
   const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>GLYPHS.b[h.captured.type]).join(""); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>GLYPHS.w[h.captured.type]).join("");
-  $("whiteCaptured").textContent=whiteCaps; $("blackCaptured").textContent=blackCaps;
+  $("whiteCaptured").textContent=bottomColor==="w"?whiteCaps:blackCaps;$("blackCaptured").textContent=topColor==="w"?whiteCaps:blackCaps;
+}
+
+function formatClock(seconds){if(seconds===null)return"∞";const value=Math.max(0,Math.ceil(seconds)),minutes=Math.floor(value/60),secs=value%60;return `${minutes}:${String(secs).padStart(2,"0")}`;}
+function renderClocks(){
+  const bottomColor=state.mode==="ai"?state.playerColor:"w",topColor=opposite(bottomColor),clocks=[["whiteClock",bottomColor],["blackClock",topColor]];
+  for(const [id,color] of clocks){const el=$(id),active=state.turn===color&&!state.over;el.textContent=formatClock(state.clocks[color]);el.setAttribute("aria-label",colorName(color)+" clock");el.classList.toggle("active",active);el.classList.toggle("low",state.clocks[color]!==null&&state.clocks[color]<10);}
 }
 
 function undo() {
-  if(!state.history.length||state.busy)return; let steps=state.mode==="ai"&&state.history.length>=2&&state.turn==="w"?2:1; let snap;
-  while(steps--&&state.history.length){snap=state.history[state.history.length-1].snapshot;Object.assign(state,clonePosition(snap),{history:snap.history.map(h=>({...h})),lastMove:snap.lastMove,positions:new Map(snap.positions),selected:null,legal:[],over:false});}
-  render();
+  if(!state.history.length||state.busy)return; let steps=state.mode==="ai"&&state.history.length>=2&&state.turn===state.playerColor?2:1; let snap;
+  while(steps--&&state.history.length){snap=state.history[state.history.length-1].snapshot;Object.assign(state,clonePosition(snap),{history:snap.history.map(h=>({...h})),lastMove:snap.lastMove,positions:new Map(snap.positions),clocks:{...snap.clocks},lastTick:snap.clocks.w===null?null:performance.now(),selected:null,legal:[],over:false,outcome:null});}
+  render();if(!clockTimer)startClock();
 }
 function playTone(isCapture=false){
   if(!state.sound)return;
@@ -226,7 +251,7 @@ function playTone(isCapture=false){
 }
 function playOutcomeSound(result){
   if(!state.sound||!result.winner)return;
-  const key=state.mode==="ai"?(result.winner==="w"?"youWin":"aiWins"):(result.winner==="w"?"player1":"player2"),audio=OUTCOME_AUDIO[key];
+  const key=state.mode==="ai"?(result.winner===state.playerColor?"youWin":"aiWins"):(result.winner==="w"?"player1":"player2"),audio=OUTCOME_AUDIO[key];
   audio.currentTime=0;
   audio.play().catch(()=>{});
 }
@@ -236,13 +261,19 @@ function playCheckSound(){
   CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;CHECK_AUDIO.play().catch(()=>{});
   checkAudioTimer=setTimeout(()=>{CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;checkAudioTimer=null;},1600);
 }
+function applyPlayerLabels(){
+  const player=colorName(state.playerColor),ai=colorName(opposite(state.playerColor));
+  $("playerName").textContent=state.mode==="ai"?"You":"Player 1";$("playerAvatar").textContent=state.mode==="ai"?"YOU":"P1";$("playerDetail").textContent=state.mode==="ai"?player:"White";
+  $("opponentName").textContent=state.mode==="ai"?"Local AI":"Player 2";$("opponentAvatar").textContent=state.mode==="ai"?"QK":"P2";$("opponentDetail").textContent=state.mode==="ai"?`Level ${state.depth} · ${ai}`:"Black";
+}
 function setMode(mode){
   state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
-  $("playerName").textContent=mode==="ai"?"You":"Player 1";$("playerAvatar").textContent=mode==="ai"?"YOU":"P1";
-  $("opponentName").textContent=mode==="ai"?"Local AI":"Player 2";$("opponentAvatar").textContent=mode==="ai"?"QK":"P2";$("opponentDetail").textContent=mode==="ai"?`Level ${state.depth} · Black`:"Black";
+  $("sideSetting").hidden=mode!=="ai";
   resetGame();
 }
 
 $("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
-$("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];$("opponentDetail").textContent=`Level ${state.depth} · Black`;};
+$("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];applyPlayerLabels();};
+document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
+document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{state.clockChoice=button.dataset.clock;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 resetGame();

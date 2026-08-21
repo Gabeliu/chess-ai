@@ -26,6 +26,7 @@
           <div class="avatar dark-avatar" id="opponentAvatar">QK</div>
           <div class="player-info"><strong id="opponentName">Local AI</strong><span id="opponentDetail">Level 2 · Black</span></div>
           <div class="captured" id="blackCaptured" aria-label="Pieces captured by black"></div>
+          <div class="clock" id="blackClock" aria-label="Black clock">∞</div>
           <div class="turn-dot" id="blackTurn" aria-label="Black to move"></div>
         </div>
 
@@ -41,6 +42,7 @@
           <div class="avatar light-avatar" id="playerAvatar">YOU</div>
           <div class="player-info"><strong id="playerName">You</strong><span id="playerDetail">White</span></div>
           <div class="captured" id="whiteCaptured" aria-label="Pieces captured by white"></div>
+          <div class="clock active" id="whiteClock" aria-label="White clock">∞</div>
           <div class="turn-dot active" id="whiteTurn" aria-label="White to move"></div>
         </div>
       </div>
@@ -57,10 +59,29 @@
           <button class="mode-tab" id="localMode" role="tab" aria-selected="false">Two players</button>
         </div>
 
+        <div class="setting" id="sideSetting">
+          <div class="setting-heading"><span>Play as</span></div>
+          <div class="option-group side-options" role="group" aria-label="Choose your side">
+            <button class="option-button active" data-side="w">White</button>
+            <button class="option-button" data-side="b">Black</button>
+            <button class="option-button" data-side="random">Random</button>
+          </div>
+        </div>
+
         <div class="setting" id="difficultySetting">
           <div class="setting-heading"><label for="difficulty">AI strength</label><output id="difficultyLabel">Balanced</output></div>
           <input id="difficulty" type="range" min="1" max="3" value="2" step="1">
           <div class="range-labels"><span>Casual</span><span>Sharp</span></div>
+        </div>
+
+        <div class="setting clock-setting">
+          <div class="setting-heading"><span>Time control</span></div>
+          <div class="option-group time-options" role="group" aria-label="Choose time control">
+            <button class="option-button" data-clock="bullet">1+0</button>
+            <button class="option-button" data-clock="blitz">3+2</button>
+            <button class="option-button" data-clock="rapid">10+0</button>
+            <button class="option-button active" data-clock="unlimited">∞</button>
+          </div>
         </div>
 
         <div class="move-section">

@@ -46,6 +46,9 @@ button { color: inherit; }
 .player-info strong { font-size: 14px; }
 .player-info span { color: var(--muted); font-size: 12px; }
 .captured { flex: 1; color: #bfc3bc; font-family: "Segoe UI Symbol", sans-serif; font-size: 18px; letter-spacing: -2px; min-height: 22px; overflow: hidden; }
+.clock { min-width: 58px; height: 32px; padding: 0 8px; display: grid; place-items: center; border: 1px solid #343936; border-radius: 4px; color: #8d948f; font: 700 14px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.clock.active { border-color: #687264; background: #252a26; color: var(--ink); }
+.clock.low { border-color: #a94e4a; color: #ff8c84; }
 .turn-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #555b57; }
 .turn-dot.active { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 4px #d7f1711a; }
 .board-wrap { position: relative; width: 100%; aspect-ratio: 1; box-shadow: 0 22px 48px #07080755; }
@@ -80,6 +83,12 @@ button { color: inherit; }
 .setting { margin-bottom: 26px; }
 .setting-heading, .section-heading { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 .setting-heading output, .section-heading span:last-child { color: var(--muted); font-size: 12px; }
+.option-group { display: grid; gap: 6px; margin-top: 11px; }
+.side-options { grid-template-columns: repeat(3, 1fr); }
+.time-options { grid-template-columns: repeat(4, 1fr); }
+.option-button { min-width: 0; height: 34px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
+.option-button:hover { background: var(--surface-2); color: var(--ink); }
+.option-button.active { border-color: var(--accent); background: #d7f17112; color: var(--accent); }
 input[type="range"] { width: 100%; height: 4px; margin: 18px 0 7px; accent-color: var(--accent); cursor: pointer; }
 .range-labels { display: flex; justify-content: space-between; color: #777d78; font-size: 10px; }
 .move-section { border-top: 1px solid var(--line); padding-top: 19px; }

@@ -125,6 +125,11 @@ input[type="range"] { width: 100%; height: 4px; margin: 18px 0 7px; accent-color
 .rule-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 13px; padding: 18px 0; border-bottom: 1px solid #2b2f2c; }
 .rule-steps li > span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #4b524d; border-radius: 50%; color: var(--accent); font-size: 11px; font-weight: 800; }
 .rule-steps strong, .piece-rules strong { display: block; margin-bottom: 4px; font-size: 13px; }
+.terms-heading { margin-top: 28px !important; color: var(--accent); font-size: 12px !important; text-transform: uppercase; }
+.beginner-terms { margin-top: 8px; }
+.beginner-terms section { display: grid; grid-template-columns: 34px 1fr; gap: 13px; padding: 15px 0; border-bottom: 1px solid #2b2f2c; }
+.beginner-terms section > span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #4b524d; color: var(--accent); font: 700 14px/1 Georgia, serif; }
+.beginner-terms strong { display: block; margin-bottom: 4px; font-size: 13px; }
 .piece-rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 26px; }
 .piece-rules > div { display: grid; grid-template-columns: 50px 1fr; grid-template-rows: auto auto; column-gap: 12px; padding: 16px 0; border-bottom: 1px solid #2b2f2c; }
 .piece-rules > div > span { grid-row: 1 / 3; color: #e8e9df; font: 42px/1 "Segoe UI Symbol", serif; }

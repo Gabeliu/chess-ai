@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151716">
   <title>Quiet Knight - Local Chess</title>
-  <link rel="stylesheet" href="styles.css?v=20260822-2">
+  <link rel="stylesheet" href="styles.css?v=20260822-3">
 </head>
 <body>
   <main class="app-shell">
@@ -128,6 +128,14 @@
         <div class="rules-page active" data-rules-page="basics">
           <div class="rule-lead"><span class="rule-king">♚</span><div><h3 data-i18n="protectKing">Protect your king</h3><p data-i18n="protectKingText">Win by checkmating the opposing king: attack it so there is no legal escape.</p></div></div>
           <ol class="rule-steps"><li><span>1</span><div><strong data-i18n="whiteFirst">White moves first</strong><p data-i18n="whiteFirstText">Players alternate one move at a time.</p></div></li><li><span>2</span><div><strong data-i18n="capturePieces">Capture opposing pieces</strong><p data-i18n="capturePiecesText">Move onto an occupied square when your piece can legally reach it.</p></div></li><li><span>3</span><div><strong data-i18n="answerCheck">Answer every check</strong><p data-i18n="answerCheckText">Move the king, block the attack, or capture the attacking piece.</p></div></li></ol>
+          <h3 class="terms-heading" data-i18n="beginnerTerms">Words every player should know</h3>
+          <div class="beginner-terms">
+            <section><span>!</span><div><strong data-i18n="checkQuestion">What is check?</strong><p data-i18n="checkAnswer">Your king is under attack. Your next move must make the king safe.</p></div></section>
+            <section><span>#</span><div><strong data-i18n="checkmateQuestion">What is checkmate?</strong><p data-i18n="checkmateAnswer">Your king is in check and no legal move can save it. The game ends immediately.</p></div></section>
+            <section><span>×</span><div><strong data-i18n="illegalQuestion">What makes a move illegal?</strong><p data-i18n="illegalAnswer">A move is illegal if the piece cannot move that way or it leaves your own king in check.</p></div></section>
+            <section><span>♚</span><div><strong data-i18n="kingCaptureQuestion">Do you capture the king?</strong><p data-i18n="kingCaptureAnswer">No. The game stops at checkmate, one move before the king could be captured.</p></div></section>
+            <section><span>½</span><div><strong data-i18n="stalemateQuestion">What is stalemate?</strong><p data-i18n="stalemateAnswer">The player has no legal move but the king is not in check. The game is a draw, not a win.</p></div></section>
+          </div>
         </div>
         <div class="rules-page" data-rules-page="pieces" hidden>
           <div class="piece-rules"><div><span>♜</span><strong data-i18n="rook">Rook</strong><p data-i18n="rookText">Any distance across ranks or files.</p></div><div><span>♝</span><strong data-i18n="bishop">Bishop</strong><p data-i18n="bishopText">Any distance along diagonals.</p></div><div><span>♛</span><strong data-i18n="queen">Queen</strong><p data-i18n="queenText">Moves like a rook and bishop.</p></div><div><span>♞</span><strong data-i18n="knight">Knight</strong><p data-i18n="knightText">Moves in an L shape and can jump.</p></div><div><span>♚</span><strong data-i18n="king">King</strong><p data-i18n="kingText">One square in any direction.</p></div><div><span>♟</span><strong data-i18n="pawn">Pawn</strong><p data-i18n="pawnText">Moves forward, captures diagonally.</p></div></div>
@@ -141,6 +149,6 @@
       </div>
     </section>
   </div>
-  <script src="app.js?v=20260822-2"></script>
+  <script src="app.js?v=20260822-3"></script>
 </body>
 </html>

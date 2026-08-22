@@ -13,6 +13,7 @@ A polished chess game with a fully local Stockfish AI opponent. It needs no API 
 - Play as White, Black, or a randomly selected side against the AI
 - 1+0, 3+2, 10+0, and unlimited time controls
 - Beginner-friendly rules guide covering pieces, special moves, and endings
+- Interface translations for English, Spanish, Chinese, and Hindi
 - Complete legal move validation
 - Castling, en passant, and promotion
 - Check, checkmate, stalemate, repetition, fifty-move, and insufficient-material detection

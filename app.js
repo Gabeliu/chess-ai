@@ -24,9 +24,18 @@ let pendingEngineMove = false;
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
+const TRANSLATIONS={
+  en:{localEngineBadge:"Local engine",rules:"Rules",currentGame:"CURRENT GAME",vsAi:"Vs AI",twoPlayers:"Two players",playAs:"Play as",white:"White",black:"Black",random:"Random",aiEngine:"AI engine",localAi:"Local AI",aiStrength:"AI strength",casual:"Casual",balanced:"Balanced",sharp:"Sharp",timeControl:"Time control",moves:"Moves",played:"{count} played",emptyHistory:"Your game record will appear here.",newGame:"New game",undo:"Undo",privacy:"No account. No API key. Every move stays on this device.",quickGuide:"QUICK GUIDE",howToPlay:"How to play",basics:"Basics",pieces:"Pieces",special:"Special",ending:"Ending",protectKing:"Protect your king",protectKingText:"Win by checkmating the opposing king: attack it so there is no legal escape.",whiteFirst:"White moves first",whiteFirstText:"Players alternate one move at a time.",capturePieces:"Capture opposing pieces",capturePiecesText:"Move onto an occupied square when your piece can legally reach it.",answerCheck:"Answer every check",answerCheckText:"Move the king, block the attack, or capture the attacking piece.",rook:"Rook",rookText:"Any distance across ranks or files.",bishop:"Bishop",bishopText:"Any distance along diagonals.",queen:"Queen",queenText:"Moves like a rook and bishop.",knight:"Knight",knightText:"Moves in an L shape and can jump.",king:"King",kingText:"One square in any direction.",pawn:"Pawn",pawnText:"Moves forward, captures diagonally.",castling:"Castling",castlingText:"Move the king two squares toward an unmoved rook. The path must be clear and safe.",enPassant:"En passant",enPassantText:"A pawn may capture a neighboring pawn immediately after it advances two squares.",promotion:"Promotion",promotionText:"A pawn reaching the farthest rank becomes a queen, rook, bishop, or knight.",checkmate:"Checkmate",checkmateText:"The checked king has no legal response. The attacking player wins.",draw:"Draw",drawText:"Games can draw by stalemate, repetition, insufficient material, or the fifty-move rule.",time:"Time",timeText:"With a chess clock, running out of time loses the game unless checkmate is impossible.",you:"You",player1:"Player 1",player2:"Player 2",wins:"wins",yourMove:"Your move",toMove:"{color} to move",kingInCheck:"{color} king is under attack",check:"Check",stockfishThinking:"Stockfish is thinking",localThinking:"Local AI is thinking",engineUnavailable:"Engine unavailable",engineHelp:"Choose Local AI or reload to retry",timeExpired:"Time expired",stalemate:"Stalemate",fiftyMove:"Fifty-move rule",repetition:"Threefold repetition",insufficient:"Insufficient material",promotePawn:"Promote pawn",levelColor:"Level {level} · {color}"},
+  es:{localEngineBadge:"Motor local",rules:"Reglas",currentGame:"PARTIDA ACTUAL",vsAi:"Contra IA",twoPlayers:"Dos jugadores",playAs:"Jugar con",white:"Blancas",black:"Negras",random:"Aleatorio",aiEngine:"Motor de IA",localAi:"IA local",aiStrength:"Fuerza de IA",casual:"Casual",balanced:"Equilibrado",sharp:"Fuerte",timeControl:"Control de tiempo",moves:"Movimientos",played:"{count} jugados",emptyHistory:"El registro de la partida aparecerá aquí.",newGame:"Nueva partida",undo:"Deshacer",privacy:"Sin cuenta. Sin clave API. Cada movimiento permanece en este dispositivo.",quickGuide:"GUÍA RÁPIDA",howToPlay:"Cómo jugar",basics:"Básico",pieces:"Piezas",special:"Especial",ending:"Final",protectKing:"Protege a tu rey",protectKingText:"Gana dando jaque mate al rey rival: atácalo sin dejarle una salida legal.",whiteFirst:"Las blancas empiezan",whiteFirstText:"Los jugadores alternan un movimiento cada vez.",capturePieces:"Captura piezas rivales",capturePiecesText:"Muévete a una casilla ocupada cuando tu pieza pueda alcanzarla legalmente.",answerCheck:"Responde a cada jaque",answerCheckText:"Mueve el rey, bloquea el ataque o captura la pieza atacante.",rook:"Torre",rookText:"Cualquier distancia por filas o columnas.",bishop:"Alfil",bishopText:"Cualquier distancia en diagonal.",queen:"Dama",queenText:"Se mueve como torre y alfil.",knight:"Caballo",knightText:"Se mueve en L y puede saltar.",king:"Rey",kingText:"Una casilla en cualquier dirección.",pawn:"Peón",pawnText:"Avanza de frente y captura en diagonal.",castling:"Enroque",castlingText:"Mueve el rey dos casillas hacia una torre que no se haya movido. El camino debe estar libre y seguro.",enPassant:"Al paso",enPassantText:"Un peón puede capturar a otro vecino justo después de que avance dos casillas.",promotion:"Promoción",promotionText:"Un peón que llega a la última fila se convierte en dama, torre, alfil o caballo.",checkmate:"Jaque mate",checkmateText:"El rey en jaque no tiene respuesta legal. Gana el atacante.",draw:"Tablas",drawText:"Hay tablas por ahogado, repetición, material insuficiente o la regla de cincuenta movimientos.",time:"Tiempo",timeText:"Con reloj, quedarse sin tiempo pierde la partida salvo que el mate sea imposible.",you:"Tú",player1:"Jugador 1",player2:"Jugador 2",wins:"gana",yourMove:"Tu turno",toMove:"Turno de {color}",kingInCheck:"El rey de {color} está bajo ataque",check:"Jaque",stockfishThinking:"Stockfish está pensando",localThinking:"La IA local está pensando",engineUnavailable:"Motor no disponible",engineHelp:"Elige IA local o recarga para reintentar",timeExpired:"Tiempo agotado",stalemate:"Ahogado",fiftyMove:"Regla de cincuenta movimientos",repetition:"Triple repetición",insufficient:"Material insuficiente",promotePawn:"Promocionar peón",levelColor:"Nivel {level} · {color}"},
+  zh:{localEngineBadge:"本地引擎",rules:"规则",currentGame:"当前对局",vsAi:"对战 AI",twoPlayers:"双人对战",playAs:"选择执棋",white:"白方",black:"黑方",random:"随机",aiEngine:"AI 引擎",localAi:"本地 AI",aiStrength:"AI 强度",casual:"休闲",balanced:"均衡",sharp:"强劲",timeControl:"时间控制",moves:"着法",played:"已走 {count} 步",emptyHistory:"对局记录将显示在这里。",newGame:"新对局",undo:"悔棋",privacy:"无需账户，无需 API 密钥。所有着法仅保留在此设备上。",quickGuide:"快速指南",howToPlay:"国际象棋玩法",basics:"基础",pieces:"棋子",special:"特殊规则",ending:"结束",protectKing:"保护你的王",protectKingText:"将死对方的王即可获胜：攻击它并让它无合法逃脱方式。",whiteFirst:"白方先行",whiteFirstText:"双方每次轮流走一步。",capturePieces:"吃掉对方棋子",capturePiecesText:"当棋子可以合法到达时，走到对方占据的格子即可吃子。",answerCheck:"必须应对将军",answerCheckText:"移动王、挡住攻击，或吃掉进攻棋子。",rook:"车",rookText:"沿横线或竖线移动任意距离。",bishop:"象",bishopText:"沿斜线移动任意距离。",queen:"后",queenText:"兼具车和象的走法。",knight:"马",knightText:"走日字，并且可以跳过棋子。",king:"王",kingText:"向任意方向移动一格。",pawn:"兵",pawnText:"向前移动，斜向吃子。",castling:"王车易位",castlingText:"王向未移动过的车方向移动两格。路径必须畅通且不受攻击。",enPassant:"吃过路兵",enPassantText:"相邻兵一次前进两格后，另一兵可立即将其吃掉。",promotion:"升变",promotionText:"兵到达最后一横线后可升变为后、车、象或马。",checkmate:"将死",checkmateText:"被将军的王没有合法应对方式，进攻方获胜。",draw:"和棋",drawText:"逼和、三次重复、子力不足或五十回合规则都可导致和棋。",time:"时间",timeText:"使用棋钟时，时间耗尽即判负，除非不可能将死。",you:"你",player1:"玩家 1",player2:"玩家 2",wins:"获胜",yourMove:"轮到你",toMove:"{color}走棋",kingInCheck:"{color}的王正受到攻击",check:"将军",stockfishThinking:"Stockfish 正在思考",localThinking:"本地 AI 正在思考",engineUnavailable:"引擎不可用",engineHelp:"请选择本地 AI 或刷新重试",timeExpired:"时间耗尽",stalemate:"逼和",fiftyMove:"五十回合规则",repetition:"三次重复",insufficient:"子力不足",promotePawn:"兵升变",levelColor:"等级 {level} · {color}"},
+  hi:{localEngineBadge:"स्थानीय इंजन",rules:"नियम",currentGame:"वर्तमान खेल",vsAi:"AI के विरुद्ध",twoPlayers:"दो खिलाड़ी",playAs:"पक्ष चुनें",white:"सफ़ेद",black:"काला",random:"यादृच्छिक",aiEngine:"AI इंजन",localAi:"स्थानीय AI",aiStrength:"AI कठिनाई",casual:"आसान",balanced:"संतुलित",sharp:"कठिन",timeControl:"समय नियंत्रण",moves:"चालें",played:"{count} चालें",emptyHistory:"खेल का रिकॉर्ड यहाँ दिखाई देगा।",newGame:"नया खेल",undo:"चाल वापस",privacy:"कोई खाता नहीं। कोई API कुंजी नहीं। हर चाल इसी डिवाइस पर रहती है।",quickGuide:"त्वरित मार्गदर्शिका",howToPlay:"कैसे खेलें",basics:"मूल बातें",pieces:"मोहरें",special:"विशेष",ending:"समाप्ति",protectKing:"अपने राजा की रक्षा करें",protectKingText:"विरोधी राजा को शह-मात देकर जीतें: उस पर ऐसा हमला करें जिससे कोई वैध बचाव न हो।",whiteFirst:"सफ़ेद पहले चलता है",whiteFirstText:"खिलाड़ी बारी-बारी से एक चाल चलते हैं।",capturePieces:"विरोधी मोहरे पकड़ें",capturePiecesText:"जब आपका मोहरा कानूनी रूप से पहुँच सके, तो विरोधी की खाने वाली जगह पर जाएँ।",answerCheck:"हर शह का जवाब दें",answerCheckText:"राजा को हटाएँ, हमला रोकें या हमलावर मोहरे को पकड़ें।",rook:"हाथी",rookText:"सीधी पंक्ति या स्तंभ में कितनी भी दूर।",bishop:"ऊँट",bishopText:"तिरछी दिशा में कितनी भी दूर।",queen:"वज़ीर",queenText:"हाथी और ऊँट दोनों की तरह चलता है।",knight:"घोड़ा",knightText:"L आकार में चलता है और छलांग लगा सकता है।",king:"राजा",kingText:"किसी भी दिशा में एक घर।",pawn:"प्यादा",pawnText:"आगे चलता है और तिरछा पकड़ता है।",castling:"कैसलिंग",castlingText:"राजा को बिना चले हाथी की ओर दो घर चलाएँ। रास्ता खाली और सुरक्षित होना चाहिए।",enPassant:"एन पासां",enPassantText:"प्यादा पड़ोसी प्यादे को उसके दो घर बढ़ने के तुरंत बाद पकड़ सकता है।",promotion:"प्रमोशन",promotionText:"अंतिम पंक्ति पर पहुँचा प्यादा वज़ीर, हाथी, ऊँट या घोड़ा बनता है।",checkmate:"शह-मात",checkmateText:"शह में राजा के पास कोई वैध बचाव नहीं है। हमलावर जीतता है।",draw:"ड्रॉ",drawText:"स्टेलमेट, दोहराव, अपर्याप्त मोहरे या पचास-चाल नियम से ड्रॉ हो सकता है।",time:"समय",timeText:"घड़ी में समय समाप्त होने पर हार होती है, जब तक शह-मात असंभव न हो।",you:"आप",player1:"खिलाड़ी 1",player2:"खिलाड़ी 2",wins:"जीतता है",yourMove:"आपकी चाल",toMove:"{color} की चाल",kingInCheck:"{color} का राजा खतरे में है",check:"शह",stockfishThinking:"Stockfish सोच रहा है",localThinking:"स्थानीय AI सोच रहा है",engineUnavailable:"इंजन उपलब्ध नहीं",engineHelp:"स्थानीय AI चुनें या पुनः प्रयास के लिए रीलोड करें",timeExpired:"समय समाप्त",stalemate:"स्टेलमेट",fiftyMove:"पचास-चाल नियम",repetition:"तीन बार दोहराव",insufficient:"अपर्याप्त मोहरे",promotePawn:"प्यादे का प्रमोशन",levelColor:"स्तर {level} · {color}"}
+};
+let currentLanguage="en";try{currentLanguage=localStorage.getItem("quietKnightLanguage")||"en";}catch{}
+function t(key,values={}){let text=TRANSLATIONS[currentLanguage]?.[key]??TRANSLATIONS.en[key]??key;for(const [name,value]of Object.entries(values))text=text.replace(`{${name}}`,value);return text;}
+function applyLanguage(){document.documentElement.lang=currentLanguage;$("languageSelect").value=currentLanguage;document.querySelectorAll("[data-i18n]").forEach(element=>{element.textContent=t(element.dataset.i18n);});const difficultyKey=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=difficultyKey;$("difficultyLabel").textContent=t(difficultyKey);applyPlayerLabels();render();}
 
 function clonePosition(s) { return { board: s.board.map(p => p ? { ...p } : null), turn: s.turn, enPassant: s.enPassant, castling: { ...s.castling }, halfmove: s.halfmove }; }
-function colorName(c) { return c === "w" ? "White" : "Black"; }
+function colorName(c) { return t(c === "w" ? "white" : "black"); }
 function rc(i) { return [Math.floor(i / 8), i % 8]; }
 function idx(r, c) { return r * 8 + c; }
 function inside(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
@@ -54,7 +63,7 @@ function startClock(){if(state.clocks.w===null)return;clockTimer=setInterval(()=
 function updateClock(){
   if(state.lastTick===null||state.over)return;
   const now=performance.now(),elapsed=(now-state.lastTick)/1000;state.lastTick=now;state.clocks[state.turn]=Math.max(0,state.clocks[state.turn]-elapsed);
-  if(state.clocks[state.turn]<=0){state.outcome={title:"Time",text:"Time expired",winner:opposite(state.turn)};state.over=true;state.busy=false;pendingEngineMove=false;if(stockfish)stockfish.postMessage("stop");if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}if(clockTimer){clearInterval(clockTimer);clockTimer=null;}playOutcomeSound(state.outcome);render();}
+  if(state.clocks[state.turn]<=0){state.outcome={titleKey:"time",textKey:"timeExpired",winner:opposite(state.turn)};state.over=true;state.busy=false;pendingEngineMove=false;if(stockfish)stockfish.postMessage("stop");if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}if(clockTimer){clearInterval(clockTimer);clockTimer=null;}playOutcomeSound(state.outcome);render();}
 }
 
 function attacksSquare(pos, from, target) {
@@ -142,19 +151,20 @@ function notation(before, move, after, promotion = "q") {
 function positionKey(pos) { return pos.board.map(p => p ? p.color+p.type : "--").join("") + pos.turn + JSON.stringify(pos.castling) + pos.enPassant; }
 function recordPosition() { const key = positionKey(state); state.positions.set(key, (state.positions.get(key)||0)+1); }
 function gameResult(pos) {
-  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { title: "Checkmate", text: "Checkmate", winner: opposite(pos.turn) } : { title: "Draw", text: "Stalemate" };
-  if (pos.halfmove >= 100) return { title: "Draw", text: "Fifty-move rule" };
-  if ((state.positions.get(positionKey(pos))||0) >= 3) return { title: "Draw", text: "Threefold repetition" };
-  const material = pos.board.filter(Boolean); if (material.every(p => p.type === "k" || p.type === "b" || p.type === "n") && material.length <= 3) return { title: "Draw", text: "Insufficient material" };
+  const moves = legalMoves(pos); if (!moves.length) return inCheck(pos, pos.turn) ? { titleKey: "checkmate", textKey: "checkmate", winner: opposite(pos.turn) } : { titleKey: "draw", textKey: "stalemate" };
+  if (pos.halfmove >= 100) return { titleKey: "draw", textKey: "fiftyMove" };
+  if ((state.positions.get(positionKey(pos))||0) >= 3) return { titleKey: "draw", textKey: "repetition" };
+  const material = pos.board.filter(Boolean); if (material.every(p => p.type === "k" || p.type === "b" || p.type === "n") && material.length <= 3) return { titleKey: "draw", textKey: "insufficient" };
   return null;
 }
 
 function resultDisplay(result) {
-  if (!result?.winner) return result;
+  if (!result) return null;
+  if (!result.winner) return {title:t(result.titleKey),text:t(result.textKey)};
   const winner = state.mode === "ai"
-    ? (result.winner === state.playerColor ? "You" : "Local AI")
-    : (result.winner === "w" ? "Player 1" : "Player 2");
-  return { title: winner + " wins", text: result.text };
+    ? (result.winner === state.playerColor ? t("you") : (state.engineChoice === "stockfish" ? "Stockfish" : t("localAi")))
+    : (result.winner === "w" ? t("player1") : t("player2"));
+  return { title: `${winner} ${t("wins")}`, text: t(result.textKey) };
 }
 
 function positionFen(pos){
@@ -234,7 +244,7 @@ function handleSquare(index) {
 
 function showPromotion(move) {
   const dialog=$("promotionDialog"), box=$("promotionChoices"); box.innerHTML="";
-  for(const type of ["q","r","b","n"]){ const b=document.createElement("button"); b.textContent=GLYPHS[state.turn][type]; b.setAttribute("aria-label","Promote to "+({q:"queen",r:"rook",b:"bishop",n:"knight"}[type])); b.onclick=()=>{dialog.hidden=true;commitMove(move,type);}; box.appendChild(b); }
+  for(const type of ["q","r","b","n"]){ const b=document.createElement("button"); b.textContent=GLYPHS[state.turn][type]; b.setAttribute("aria-label",`${t("promotion")}: ${t({q:"queen",r:"rook",b:"bishop",n:"knight"}[type])}`); b.onclick=()=>{dialog.hidden=true;commitMove(move,type);}; box.appendChild(b); }
   dialog.hidden=false;
 }
 
@@ -243,7 +253,7 @@ function renderBoard() {
   const checkedKing=inCheck(state,state.turn)?state.board.findIndex(p=>p?.color===state.turn&&p.type==="k"):-1;
   for(const i of order){ const [r,c]=rc(i), button=document.createElement("button"), p=state.board[i], legal=state.legal.find(m=>m.to===i);
     button.className=`square ${(r+c)%2?"dark":"light"}${state.selected===i?" selected":""}${state.lastMove&&(state.lastMove.from===i||state.lastMove.to===i)?" last-move":""}${checkedKing===i?" in-check":""}${legal?" legal":""}${legal?.capture?" capture":""}`;
-    button.dataset.square=squareName(i); button.setAttribute("role","gridcell"); button.setAttribute("aria-label",`${squareName(i)}${p?", "+colorName(p.color)+" "+({k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn"}[p.type]):", empty"}`); button.onclick=()=>handleSquare(i);
+    button.dataset.square=squareName(i); button.setAttribute("role","gridcell"); button.setAttribute("aria-label",`${squareName(i)}${p?", "+colorName(p.color)+" "+t({k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn"}[p.type]):", empty"}`); button.onclick=()=>handleSquare(i);
     if(p){const span=document.createElement("span");span.className="piece "+(p.color==="w"?"white":"black");span.textContent=GLYPHS[p.color][p.type];button.appendChild(span);}
     const displayR=state.flipped?7-r:r, displayC=state.flipped?7-c:c;
     if(displayC===0){const s=document.createElement("span");s.className="coord rank";s.textContent=8-r;button.appendChild(s);} if(displayR===7){const s=document.createElement("span");s.className="coord file";s.textContent=FILES[c];button.appendChild(s);}
@@ -252,7 +262,7 @@ function renderBoard() {
 }
 
 function renderHistory() {
-  const list=$("moveList"); if(!state.history.length){list.className="move-list empty";list.innerHTML="<span>Your game record will appear here.</span>";return;}
+  const list=$("moveList"); if(!state.history.length){list.className="move-list empty";list.innerHTML="";const message=document.createElement("span");message.textContent=t("emptyHistory");list.appendChild(message);return;}
   list.className="move-list"; list.innerHTML="";
   for(let i=0;i<state.history.length;i+=2){const row=document.createElement("div");row.className="move-row";row.innerHTML=`<span>${i/2+1}.</span><span>${state.history[i]?.notation||""}</span><span>${state.history[i+1]?.notation||""}</span>`;list.appendChild(row);} list.scrollTop=list.scrollHeight;
 }
@@ -260,12 +270,12 @@ function renderHistory() {
 function render() {
   renderBoard(); renderHistory(); renderClocks(); const result=state.outcome||gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
   const engineFailed=state.engineChoice==="stockfish"&&state.engineError;
-  $("statusTitle").textContent=displayResult?.title || (engineFailed?"Engine unavailable":state.busy?(state.engineChoice==="stockfish"?"Stockfish is thinking":"Local AI is thinking"):check?"Check":state.mode==="ai"&&state.turn===state.playerColor?"Your move":colorName(state.turn)+" to move");
-  $("statusText").textContent=displayResult?.text || (engineFailed?"Choose Local AI or reload to retry":check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
+  $("statusTitle").textContent=displayResult?.title || (engineFailed?t("engineUnavailable"):state.busy?t(state.engineChoice==="stockfish"?"stockfishThinking":"localThinking"):check?t("check"):state.mode==="ai"&&state.turn===state.playerColor?t("yourMove"):t("toMove",{color:colorName(state.turn)}));
+  $("statusText").textContent=displayResult?.text || (engineFailed?t("engineHelp"):check?t("kingInCheck",{color:colorName(state.turn)}):t("toMove",{color:colorName(state.turn)}));
   const bottomColor=state.mode==="ai"?state.playerColor:"w",topColor=opposite(bottomColor);
-  $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",colorName(bottomColor)+" to move");
-  $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",colorName(topColor)+" to move");
-  $("moveCount").textContent=state.history.length+` played`; $("undoButton").disabled=!state.history.length||state.busy;
+  $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",t("toMove",{color:colorName(bottomColor)}));
+  $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",t("toMove",{color:colorName(topColor)}));
+  $("moveCount").textContent=t("played",{count:state.history.length}); $("undoButton").disabled=!state.history.length||state.busy;
   const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>GLYPHS.b[h.captured.type]).join(""); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>GLYPHS.w[h.captured.type]).join("");
   $("whiteCaptured").textContent=bottomColor==="w"?whiteCaps:blackCaps;$("blackCaptured").textContent=topColor==="w"?whiteCaps:blackCaps;
 }
@@ -303,8 +313,8 @@ function playCheckSound(){
 }
 function applyPlayerLabels(){
   const player=colorName(state.playerColor),ai=colorName(opposite(state.playerColor));
-  $("playerName").textContent=state.mode==="ai"?"You":"Player 1";$("playerAvatar").textContent=state.mode==="ai"?"YOU":"P1";$("playerDetail").textContent=state.mode==="ai"?player:"White";
-  $("opponentName").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"Stockfish":"Local AI"):"Player 2";$("opponentAvatar").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"SF":"QK"):"P2";$("opponentDetail").textContent=state.mode==="ai"?`Level ${state.depth} · ${ai}`:"Black";
+  $("playerName").textContent=state.mode==="ai"?t("you"):t("player1");$("playerAvatar").textContent=state.mode==="ai"?"YOU":"P1";$("playerDetail").textContent=state.mode==="ai"?player:t("white");
+  $("opponentName").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"Stockfish":t("localAi")):t("player2");$("opponentAvatar").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"SF":"QK"):"P2";$("opponentDetail").textContent=state.mode==="ai"?t("levelColor",{level:state.depth,color:ai}):t("black");
 }
 function setMode(mode){
   state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
@@ -313,7 +323,8 @@ function setMode(mode){
 }
 
 $("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
-$("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];applyPlayerLabels();};
+$("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const key=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=key;$("difficultyLabel").textContent=t(key);applyPlayerLabels();};
+$("languageSelect").onchange=event=>{currentLanguage=event.target.value;try{localStorage.setItem("quietKnightLanguage",currentLanguage);}catch{}applyLanguage();};
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{state.clockChoice=button.dataset.clock;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
@@ -322,4 +333,4 @@ function closeRules(){$("rulesOverlay").hidden=true;document.body.classList.remo
 $("rulesButton").onclick=openRules;$("closeRulesButton").onclick=closeRules;$("rulesOverlay").onclick=event=>{if(event.target===$("rulesOverlay"))closeRules();};
 document.querySelectorAll("[data-rules-tab]").forEach(button=>button.onclick=()=>{const tab=button.dataset.rulesTab;document.querySelectorAll("[data-rules-tab]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-selected",active);});document.querySelectorAll("[data-rules-page]").forEach(page=>{const active=page.dataset.rulesPage===tab;page.classList.toggle("active",active);page.hidden=!active;});});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("rulesOverlay").hidden)closeRules();});
-resetGame();initStockfish();
+resetGame();applyLanguage();initStockfish();

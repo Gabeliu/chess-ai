@@ -13,6 +13,7 @@
 }
 
 * { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }
 body {
   margin: 0;
   min-width: 320px;
@@ -38,7 +39,7 @@ button { color: inherit; }
 .icon-button { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: 18px; }
 .icon-button:hover { background: var(--surface-2); }
 .icon-button.bordered { border: 1px solid var(--line); flex: 0 0 42px; height: 42px; }
-.game-layout { display: grid; grid-template-columns: minmax(460px, 680px) minmax(300px, 360px); gap: clamp(36px, 7vw, 90px); align-items: center; padding: 38px 0 52px; }
+.game-layout { display: grid; grid-template-columns: minmax(460px, 680px) minmax(300px, 360px); gap: clamp(36px, 7vw, 90px); align-items: start; padding: 38px 0 52px; }
 .board-column { min-width: 0; }
 .player-strip { height: 54px; display: flex; align-items: center; gap: 11px; }
 .player-strip.opponent { margin-bottom: 9px; }
@@ -78,6 +79,7 @@ button { color: inherit; }
 .promotion-dialog > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .promotion-dialog button { aspect-ratio: 1; border: 1px solid var(--line); background: #2a2e2b; cursor: pointer; font-size: 34px; }
 .control-panel { min-width: 0; border-left: 1px solid var(--line); padding-left: clamp(28px, 4vw, 46px); }
+.status-block { min-height: 100px; }
 .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }
 .status-block h1 { margin: 10px 0 5px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 44px); font-weight: 500; line-height: 1.05; }
 .status-block p { margin: 0; color: var(--muted); font-size: 14px; }

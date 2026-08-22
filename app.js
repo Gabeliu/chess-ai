@@ -176,9 +176,22 @@ function handleStockfishLine(line){
   const from=idx(8-Number(uci[1]),FILES.indexOf(uci[0])),to=idx(8-Number(uci[3]),FILES.indexOf(uci[2])),move=legalMoves(state).find(candidate=>candidate.from===from&&candidate.to===to);
   state.busy=false;if(move)commitMove(move,uci[4]||"q");else render();
 }
+function failStockfish(){state.engineError=true;state.busy=false;render();}
+function initStockfishAsm(){
+  const script=document.createElement("script");script.src="assets/stockfish/stockfish-asm.js";
+  script.onload=async()=>{try{
+    const engine=await script._exports({listener:handleStockfishLine}),queue=[];
+    const execute=command=>{try{const result=engine.ccall("command",null,["string"],[command],{async:/^go\b/.test(command)});if(result?.catch)result.catch(failStockfish);}catch{failStockfish();}};
+    const pump=()=>{while(queue.length&&(!engine._isSearching||!engine._isSearching()))execute(queue.shift());};engine.onDoneSearching=()=>setTimeout(pump,0);
+    stockfish={postMessage(command){if(/^go\b|^setoption\b/.test(command)){queue.push(command);pump();}else{execute(command);pump();}},terminate(){engine.terminate?.();}};
+    stockfish.postMessage("uci");
+  }catch{failStockfish();}};
+  script.onerror=failStockfish;document.head.appendChild(script);
+}
 function initStockfish(){
-  try{stockfish=new Worker("assets/stockfish/stockfish.js");stockfish.onmessage=event=>handleStockfishLine(event.data);stockfish.onerror=()=>{state.engineError=true;state.busy=false;render();};stockfish.postMessage("uci");}
-  catch{state.engineError=true;state.busy=false;render();}
+  if(location.protocol==="file:"){initStockfishAsm();return;}
+  try{stockfish=new Worker("assets/stockfish/stockfish.js");stockfish.onmessage=event=>handleStockfishLine(event.data);stockfish.onerror=failStockfish;stockfish.postMessage("uci");}
+  catch{failStockfish();}
 }
 
 function commitMove(move, promotion = "q") {

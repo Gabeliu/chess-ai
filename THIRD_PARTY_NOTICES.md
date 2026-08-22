@@ -2,7 +2,7 @@
 
 ## Stockfish.js
 
-Quiet Knight includes the unmodified lite single-threaded WebAssembly build from `stockfish@18.0.8`.
+Quiet Knight includes the unmodified lite single-threaded WebAssembly build and ASM fallback from `stockfish@18.0.8`.
 
 - Project: https://github.com/nmrugg/stockfish.js
 - Pinned source: https://github.com/nmrugg/stockfish.js/tree/6a2a60eb3e3cd20bc1d6ad2f32f592c35233511c

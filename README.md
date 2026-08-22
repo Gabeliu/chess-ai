@@ -26,7 +26,7 @@ Vanilla HTML, CSS, and JavaScript. Stockfish runs entirely in a browser Web Work
 
 ## Stockfish
 
-This project bundles the lite single-threaded build from [Stockfish.js 18.0.8](https://github.com/nmrugg/stockfish.js/tree/6a2a60eb3e3cd20bc1d6ad2f32f592c35233511c), licensed under GPL-3.0. The upstream license and package README are included in `assets/stockfish` alongside the unmodified engine files.
+This project bundles the lite single-threaded WebAssembly build and ASM fallback from [Stockfish.js 18.0.8](https://github.com/nmrugg/stockfish.js/tree/6a2a60eb3e3cd20bc1d6ad2f32f592c35233511c), licensed under GPL-3.0. The upstream license and package README are included in `assets/stockfish` alongside the unmodified engine files.
 
 ## License
 

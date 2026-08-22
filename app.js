@@ -1,7 +1,6 @@
 "use strict";
 
-// Text variation selectors prevent mobile browsers from substituting emoji glyphs.
-const GLYPHS = { w: { k: "♔\uFE0E", q: "♕\uFE0E", r: "♖\uFE0E", b: "♗\uFE0E", n: "♘\uFE0E", p: "♙\uFE0E" }, b: { k: "♚\uFE0E", q: "♛\uFE0E", r: "♜\uFE0E", b: "♝\uFE0E", n: "♞\uFE0E", p: "♟\uFE0E" } };
+function pieceAsset(color,type){return `assets/pieces/${color}${type.toUpperCase()}.svg`;}
 const VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 const FILES = "abcdefgh";
 const START = ["br","bn","bb","bq","bk","bb","bn","br","bp","bp","bp","bp","bp","bp","bp","bp",...Array(32).fill(null),"wp","wp","wp","wp","wp","wp","wp","wp","wr","wn","wb","wq","wk","wb","wn","wr"];
@@ -253,7 +252,7 @@ function handleSquare(index) {
 
 function showPromotion(move) {
   const dialog=$("promotionDialog"), box=$("promotionChoices"); box.innerHTML="";
-  for(const type of ["q","r","b","n"]){ const b=document.createElement("button"); b.textContent=GLYPHS[state.turn][type]; b.setAttribute("aria-label",`${t("promotion")}: ${t({q:"queen",r:"rook",b:"bishop",n:"knight"}[type])}`); b.onclick=()=>{dialog.hidden=true;commitMove(move,type);}; box.appendChild(b); }
+  for(const type of ["q","r","b","n"]){ const b=document.createElement("button"),image=document.createElement("img");image.src=pieceAsset(state.turn,type);image.alt="";image.draggable=false;b.appendChild(image);b.setAttribute("aria-label",`${t("promotion")}: ${t({q:"queen",r:"rook",b:"bishop",n:"knight"}[type])}`); b.onclick=()=>{dialog.hidden=true;commitMove(move,type);}; box.appendChild(b); }
   dialog.hidden=false;
 }
 
@@ -263,7 +262,7 @@ function renderBoard() {
   for(const i of order){ const [r,c]=rc(i), button=document.createElement("button"), p=state.board[i], legal=state.legal.find(m=>m.to===i);
     button.className=`square ${(r+c)%2?"dark":"light"}${state.selected===i?" selected":""}${state.lastMove&&(state.lastMove.from===i||state.lastMove.to===i)?" last-move":""}${checkedKing===i?" in-check":""}${legal?" legal":""}${legal?.capture?" capture":""}`;
     button.dataset.square=squareName(i); button.setAttribute("role","gridcell"); button.setAttribute("aria-label",`${squareName(i)}${p?", "+colorName(p.color)+" "+t({k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn"}[p.type]):", empty"}`); button.onclick=()=>handleSquare(i);
-    if(p){const span=document.createElement("span");span.className="piece "+(p.color==="w"?"white":"black");span.textContent=GLYPHS[p.color][p.type];button.appendChild(span);}
+    if(p){const image=document.createElement("img");image.className="piece";image.src=pieceAsset(p.color,p.type);image.alt="";image.draggable=false;button.appendChild(image);}
     const displayR=state.flipped?7-r:r, displayC=state.flipped?7-c:c;
     if(displayC===0){const s=document.createElement("span");s.className="coord rank";s.textContent=8-r;button.appendChild(s);} if(displayR===7){const s=document.createElement("span");s.className="coord file";s.textContent=FILES[c];button.appendChild(s);}
     board.appendChild(button);
@@ -285,9 +284,11 @@ function render() {
   $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",t("toMove",{color:colorName(bottomColor)}));
   $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",t("toMove",{color:colorName(topColor)}));
   $("moveCount").textContent=t("played",{count:state.history.length}); $("undoButton").disabled=!state.history.length||state.busy;
-  const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>GLYPHS.b[h.captured.type]).join(""); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>GLYPHS.w[h.captured.type]).join("");
-  $("whiteCaptured").textContent=bottomColor==="w"?whiteCaps:blackCaps;$("blackCaptured").textContent=topColor==="w"?whiteCaps:blackCaps;
+  const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>({color:"b",type:h.captured.type})); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>({color:"w",type:h.captured.type}));
+  renderCaptured("whiteCaptured",bottomColor==="w"?whiteCaps:blackCaps);renderCaptured("blackCaptured",topColor==="w"?whiteCaps:blackCaps);
 }
+
+function renderCaptured(id,pieces){const container=$(id);container.innerHTML="";for(const piece of pieces){const image=document.createElement("img");image.src=pieceAsset(piece.color,piece.type);image.alt="";image.draggable=false;container.appendChild(image);}}
 
 function formatClock(seconds){if(seconds===null)return"∞";const value=Math.max(0,Math.ceil(seconds)),minutes=Math.floor(value/60),secs=value%60;return `${minutes}:${String(secs).padStart(2,"0")}`;}
 function renderClocks(){

@@ -2,6 +2,7 @@
 
 // Solid silhouettes stay legible at small sizes; color and outline distinguish sides.
 const GLYPHS = { w: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" }, b: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" } };
+const VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 const FILES = "abcdefgh";
 const START = ["br","bn","bb","bq","bk","bb","bn","br","bp","bp","bp","bp","bp","bp","bp","bp",...Array(32).fill(null),"wp","wp","wp","wp","wp","wp","wp","wp","wr","wn","wb","wq","wk","wb","wn","wr"];
 const OUTCOME_AUDIO = {
@@ -21,7 +22,7 @@ let stockfish = null;
 let stockfishReady = false;
 let pendingEngineMove = false;
 
-const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
+const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
 
 function clonePosition(s) { return { board: s.board.map(p => p ? { ...p } : null), turn: s.turn, enPassant: s.enPassant, castling: { ...s.castling }, halfmove: s.halfmove }; }
@@ -48,7 +49,7 @@ function resetGame() {
 }
 
 function isAiTurn(){return state.mode==="ai"&&state.turn!==state.playerColor;}
-function scheduleAiMove(){if(state.over||!isAiTurn())return;state.busy=true;render();aiTimer=setTimeout(()=>{aiTimer=null;updateClock();if(state.over)return;if(stockfishReady)requestStockfishMove();},260);}
+function scheduleAiMove(){if(state.over||!isAiTurn())return;state.busy=true;render();aiTimer=setTimeout(()=>{aiTimer=null;updateClock();if(state.over)return;if(state.engineChoice==="local"){const move=chooseLocalAiMove();state.busy=false;if(move)commitMove(move);}else if(stockfishReady)requestStockfishMove();},260);}
 function startClock(){if(state.clocks.w===null)return;clockTimer=setInterval(()=>{updateClock();renderClocks();},200);}
 function updateClock(){
   if(state.lastTick===null||state.over)return;
@@ -161,8 +162,22 @@ function positionFen(pos){
   const rights=(pos.castling.wk?"K":"")+(pos.castling.wq?"Q":"")+(pos.castling.bk?"k":"")+(pos.castling.bq?"q":"");
   return `${rows.join("/")} ${pos.turn} ${rights||"-"} ${pos.enPassant===null?"-":squareName(pos.enPassant)} ${pos.halfmove} ${Math.floor(state.history.length/2)+1}`;
 }
+function evaluateLocal(pos){
+  let score=0;pos.board.forEach((piece,i)=>{if(!piece)return;const [r,c]=rc(i),center=(3.5-Math.abs(3.5-r))+(3.5-Math.abs(3.5-c)),activity=piece.type==="p"?(piece.color==="w"?6-r:r-1)*7:(piece.type==="n"||piece.type==="b"?center*5:0);score+=(piece.color==="b"?1:-1)*(VALUES[piece.type]+activity);});return score;
+}
+function searchLocal(pos,depth,alpha,beta){
+  const moves=legalMoves(pos);if(!moves.length)return inCheck(pos,pos.turn)?(pos.turn==="b"?-99999-depth:99999+depth):0;if(depth===0)return evaluateLocal(pos);
+  moves.sort((a,b)=>(b.capture?VALUES[b.capture.type]:0)-(a.capture?VALUES[a.capture.type]:0));
+  if(pos.turn==="b"){let best=-Infinity;for(const move of moves){best=Math.max(best,searchLocal(applyMove(pos,move),depth-1,alpha,beta));alpha=Math.max(alpha,best);if(beta<=alpha)break;}return best;}
+  let best=Infinity;for(const move of moves){best=Math.min(best,searchLocal(applyMove(pos,move),depth-1,alpha,beta));beta=Math.min(beta,best);if(beta<=alpha)break;}return best;
+}
+function chooseLocalAiMove(){
+  const moves=legalMoves(state),maximizing=state.turn==="b";let best=maximizing?-Infinity:Infinity,choices=[];
+  for(const move of moves){const score=searchLocal(applyMove(state,move),state.depth-1,-Infinity,Infinity)+(Math.random()*8-4),better=maximizing?score>best:score<best;if(better){best=score;choices=[move];}else if(score===best)choices.push(move);}
+  return choices[Math.floor(Math.random()*choices.length)];
+}
 function requestStockfishMove(){
-  if(!stockfish||!stockfishReady||pendingEngineMove||state.over||!isAiTurn())return;
+  if(state.engineChoice!=="stockfish"||!stockfish||!stockfishReady||pendingEngineMove||state.over||!isAiTurn())return;
   const strengths=[1320,1700,2200],thinkTimes=[120,300,650];pendingEngineMove=true;stockfishReady=false;
   stockfish.postMessage("setoption name UCI_LimitStrength value true");stockfish.postMessage(`setoption name UCI_Elo value ${strengths[state.depth-1]}`);
   stockfish.postMessage(`position fen ${positionFen(state)}`);stockfish.postMessage(`go movetime ${thinkTimes[state.depth-1]}`);
@@ -170,13 +185,13 @@ function requestStockfishMove(){
 function handleStockfishLine(line){
   if(typeof line!=="string")return;
   if(line==="uciok"){stockfish.postMessage("setoption name Hash value 16");stockfish.postMessage("isready");return;}
-  if(line==="readyok"){stockfishReady=true;if(state.busy&&isAiTurn()&&!aiTimer)requestStockfishMove();return;}
+  if(line==="readyok"){stockfishReady=true;if(state.engineChoice==="stockfish"&&state.busy&&isAiTurn()&&!aiTimer)requestStockfishMove();return;}
   if(!line.startsWith("bestmove ")||!pendingEngineMove)return;
   pendingEngineMove=false;stockfishReady=true;const uci=line.split(" ")[1];if(!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci))return;
   const from=idx(8-Number(uci[1]),FILES.indexOf(uci[0])),to=idx(8-Number(uci[3]),FILES.indexOf(uci[2])),move=legalMoves(state).find(candidate=>candidate.from===from&&candidate.to===to);
   state.busy=false;if(move)commitMove(move,uci[4]||"q");else render();
 }
-function failStockfish(){state.engineError=true;state.busy=false;render();}
+function failStockfish(){if(state.engineChoice==="stockfish"){state.engineError=true;state.busy=false;render();}}
 function initStockfishAsm(){
   const script=document.createElement("script");script.src="assets/stockfish/stockfish-asm.js";
   script.onload=async()=>{try{
@@ -244,8 +259,9 @@ function renderHistory() {
 
 function render() {
   renderBoard(); renderHistory(); renderClocks(); const result=state.outcome||gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
-  $("statusTitle").textContent=displayResult?.title || (state.engineError?"Engine unavailable":state.busy?"Stockfish is thinking":check?"Check":state.mode==="ai"&&state.turn===state.playerColor?"Your move":colorName(state.turn)+" to move");
-  $("statusText").textContent=displayResult?.text || (state.engineError?"Reload to retry the local engine":check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
+  const engineFailed=state.engineChoice==="stockfish"&&state.engineError;
+  $("statusTitle").textContent=displayResult?.title || (engineFailed?"Engine unavailable":state.busy?(state.engineChoice==="stockfish"?"Stockfish is thinking":"Local AI is thinking"):check?"Check":state.mode==="ai"&&state.turn===state.playerColor?"Your move":colorName(state.turn)+" to move");
+  $("statusText").textContent=displayResult?.text || (engineFailed?"Choose Local AI or reload to retry":check?colorName(state.turn)+" king is under attack":colorName(state.turn)+" to move");
   const bottomColor=state.mode==="ai"?state.playerColor:"w",topColor=opposite(bottomColor);
   $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",colorName(bottomColor)+" to move");
   $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",colorName(topColor)+" to move");
@@ -288,16 +304,17 @@ function playCheckSound(){
 function applyPlayerLabels(){
   const player=colorName(state.playerColor),ai=colorName(opposite(state.playerColor));
   $("playerName").textContent=state.mode==="ai"?"You":"Player 1";$("playerAvatar").textContent=state.mode==="ai"?"YOU":"P1";$("playerDetail").textContent=state.mode==="ai"?player:"White";
-  $("opponentName").textContent=state.mode==="ai"?"Local AI":"Player 2";$("opponentAvatar").textContent=state.mode==="ai"?"QK":"P2";$("opponentDetail").textContent=state.mode==="ai"?`Level ${state.depth} · ${ai}`:"Black";
+  $("opponentName").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"Stockfish":"Local AI"):"Player 2";$("opponentAvatar").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"SF":"QK"):"P2";$("opponentDetail").textContent=state.mode==="ai"?`Level ${state.depth} · ${ai}`:"Black";
 }
 function setMode(mode){
   state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
-  $("sideSetting").hidden=mode!=="ai";
+  $("sideSetting").hidden=mode!=="ai";$("engineSetting").hidden=mode!=="ai";
   resetGame();
 }
 
 $("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
 $("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const names=["Casual","Balanced","Sharp"];$("difficultyLabel").textContent=names[state.depth-1];applyPlayerLabels();};
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
+document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{state.clockChoice=button.dataset.clock;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 resetGame();initStockfish();

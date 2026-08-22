@@ -9,6 +9,7 @@ A polished chess game with a fully local Stockfish AI opponent. It needs no API 
 ## Features
 
 - Local Stockfish 18 WebAssembly AI with three difficulty levels
+- Built-in Local AI fallback when Stockfish is unavailable
 - Play as White, Black, or a randomly selected side against the AI
 - 1+0, 3+2, 10+0, and unlimited time controls
 - Complete legal move validation

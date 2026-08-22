@@ -24,7 +24,7 @@
       <div class="board-column">
         <div class="player-strip opponent">
           <div class="avatar dark-avatar" id="opponentAvatar">QK</div>
-          <div class="player-info"><strong id="opponentName">Local AI</strong><span id="opponentDetail">Level 2 · Black</span></div>
+          <div class="player-info"><strong id="opponentName">Stockfish</strong><span id="opponentDetail">Level 2 · Black</span></div>
           <div class="captured" id="blackCaptured" aria-label="Pieces captured by black"></div>
           <div class="clock" id="blackClock" aria-label="Black clock">∞</div>
           <div class="turn-dot" id="blackTurn" aria-label="Black to move"></div>
@@ -65,6 +65,14 @@
             <button class="option-button active" data-side="w">White</button>
             <button class="option-button" data-side="b">Black</button>
             <button class="option-button" data-side="random">Random</button>
+          </div>
+        </div>
+
+        <div class="setting" id="engineSetting">
+          <div class="setting-heading"><span>AI engine</span></div>
+          <div class="option-group engine-options" role="group" aria-label="Choose AI engine">
+            <button class="option-button active" data-engine="stockfish">Stockfish</button>
+            <button class="option-button" data-engine="local">Local AI</button>
           </div>
         </div>
 

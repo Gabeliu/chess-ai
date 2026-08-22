@@ -85,6 +85,7 @@ button { color: inherit; }
 .setting-heading output, .section-heading span:last-child { color: var(--muted); font-size: 12px; }
 .option-group { display: grid; gap: 6px; margin-top: 11px; }
 .side-options { grid-template-columns: repeat(3, 1fr); }
+.engine-options { grid-template-columns: repeat(2, 1fr); }
 .time-options { grid-template-columns: repeat(4, 1fr); }
 .option-button { min-width: 0; height: 34px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
 .option-button:hover { background: var(--surface-2); color: var(--ink); }

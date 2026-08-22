@@ -317,4 +317,9 @@ $("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{state.clockChoice=button.dataset.clock;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
+function openRules(){$("rulesOverlay").hidden=false;document.body.classList.add("rules-open");$("closeRulesButton").focus();}
+function closeRules(){$("rulesOverlay").hidden=true;document.body.classList.remove("rules-open");$("rulesButton").focus();}
+$("rulesButton").onclick=openRules;$("closeRulesButton").onclick=closeRules;$("rulesOverlay").onclick=event=>{if(event.target===$("rulesOverlay"))closeRules();};
+document.querySelectorAll("[data-rules-tab]").forEach(button=>button.onclick=()=>{const tab=button.dataset.rulesTab;document.querySelectorAll("[data-rules-tab]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-selected",active);});document.querySelectorAll("[data-rules-page]").forEach(page=>{const active=page.dataset.rulesPage===tab;page.classList.toggle("active",active);page.hidden=!active;});});
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("rulesOverlay").hidden)closeRules();});
 resetGame();initStockfish();

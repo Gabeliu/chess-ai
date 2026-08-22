@@ -288,7 +288,7 @@ function render() {
   renderCaptured("whiteCaptured",bottomColor==="w"?whiteCaps:blackCaps);renderCaptured("blackCaptured",topColor==="w"?whiteCaps:blackCaps);
 }
 
-function renderCaptured(id,pieces){const container=$(id);container.innerHTML="";for(const piece of pieces){const image=document.createElement("img");image.src=pieceAsset(piece.color,piece.type);image.alt="";image.draggable=false;container.appendChild(image);}}
+function renderCaptured(id,pieces){const container=$(id);container.innerHTML="";for(const piece of pieces){const image=document.createElement("img");image.className=`captured-piece ${piece.color==="b"?"captured-black":"captured-white"}`;image.src=pieceAsset(piece.color,piece.type);image.alt="";image.draggable=false;container.appendChild(image);}}
 
 function formatClock(seconds){if(seconds===null)return"∞";const value=Math.max(0,Math.ceil(seconds)),minutes=Math.floor(value/60),secs=value%60;return `${minutes}:${String(secs).padStart(2,"0")}`;}
 function renderClocks(){

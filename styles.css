@@ -51,7 +51,9 @@ button { color: inherit; }
 .player-info strong { font-size: 14px; }
 .player-info span { color: var(--muted); font-size: 12px; }
 .captured { flex: 1; min-height: 22px; display: flex; align-items: center; overflow: hidden; }
-.captured img { width: 21px; height: 21px; margin-right: -5px; object-fit: contain; }
+.captured-piece { width: 24px; height: 24px; margin-right: 0; object-fit: contain; opacity: 1; }
+.captured-black { filter: invert(.72) drop-shadow(0 0 1px #fff8) drop-shadow(0 1px 0 #0008); }
+.captured-white { filter: drop-shadow(0 1px 0 #0008); }
 .clock { min-width: 58px; height: 32px; padding: 0 8px; display: grid; place-items: center; border: 1px solid #343936; border-radius: 4px; color: #8d948f; font: 700 14px ui-monospace, SFMono-Regular, Consolas, monospace; }
 .clock.active { border-color: #687264; background: #252a26; color: var(--ink); }
 .clock.low { border-color: #a94e4a; color: #ff8c84; }

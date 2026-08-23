@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151716">
   <title>Quiet Knight - Local Chess</title>
-  <link rel="stylesheet" href="styles.css?v=20260823-3">
+  <link rel="stylesheet" href="styles.css?v=20260823-4">
 </head>
 <body>
   <main class="app-shell">
@@ -61,6 +61,14 @@
         <div class="mode-tabs" role="tablist" aria-label="Game mode">
           <button class="mode-tab active" id="aiMode" role="tab" aria-selected="true" data-i18n="vsAi">Vs AI</button>
           <button class="mode-tab" id="localMode" role="tab" aria-selected="false" data-i18n="twoPlayers">Two players</button>
+          <button class="mode-tab" id="onlineMode" role="tab" aria-selected="false" data-i18n="online">Online</button>
+        </div>
+
+        <div class="setting online-setting" id="onlineSetting" hidden>
+          <div class="setting-heading"><span data-i18n="onlineGame">Online game</span><span class="connection-state" id="connectionState" data-i18n="notConnected">Not connected</span></div>
+          <p class="setting-help" id="onlineHelp" data-i18n="onlineHelp">Create a private link, then send it to the other player.</p>
+          <button class="primary-button full-button" id="createInviteButton" data-i18n="createInvite">Create invite link</button>
+          <div class="invite-row" id="inviteRow" hidden><input id="inviteLink" readonly aria-label="Invite link"><button class="icon-button bordered" id="copyInviteButton" title="Copy invite link" aria-label="Copy invite link">⧉</button></div>
         </div>
 
         <div class="setting" id="sideSetting">
@@ -96,6 +104,12 @@
           </div>
         </div>
 
+        <div class="setting appearance-setting">
+          <div class="setting-heading"><span data-i18n="appearance">Appearance</span></div>
+          <div class="appearance-row"><span data-i18n="boardTheme">Board</span><div class="theme-options" role="group" aria-label="Board theme"><button class="theme-swatch active" data-theme="forest" title="Forest"><span></span><span></span></button><button class="theme-swatch" data-theme="walnut" title="Walnut"><span></span><span></span></button><button class="theme-swatch" data-theme="ocean" title="Ocean"><span></span><span></span></button></div></div>
+          <div class="appearance-row"><span data-i18n="pieceSet">Pieces</span><div class="option-group piece-options"><button class="option-button active" data-pieces="cburnett" data-i18n="classic">Classic</button><button class="option-button" data-pieces="merida">Merida</button><button class="option-button" data-pieces="alpha">Alpha</button></div></div>
+        </div>
+
         <div class="move-section">
           <div class="section-heading"><span data-i18n="moves">Moves</span><span id="moveCount">0 played</span></div>
           <div class="move-list empty" id="moveList"><span data-i18n="emptyHistory">Your game record will appear here.</span></div>
@@ -106,11 +120,24 @@
           <button class="secondary-button" id="undoButton" disabled title="Undo last turn"><span aria-hidden="true">↶</span> <span data-i18n="undo">Undo</span></button>
           <button class="icon-button bordered" id="flipButton" title="Flip board" aria-label="Flip board">⇅</button>
         </div>
+        <button class="analysis-launch" id="analysisButton" disabled><span>⌁</span><span data-i18n="analyzeGame">Analyze game</span></button>
 
         <p class="privacy-note" data-i18n="privacy">No account. No API key. Every move stays on this device.</p>
       </aside>
     </section>
   </main>
+
+  <div class="analysis-overlay" id="analysisOverlay" hidden>
+    <section class="analysis-dialog" role="dialog" aria-modal="true" aria-labelledby="analysisTitle">
+      <header class="rules-header"><div><span class="eyebrow" data-i18n="postGame">POST-GAME</span><h2 id="analysisTitle" data-i18n="gameAnalysis">Game analysis</h2></div><button class="icon-button bordered" id="closeAnalysisButton" aria-label="Close analysis">×</button></header>
+      <div class="analysis-progress" id="analysisProgress"><span data-i18n="readyToAnalyze">Ready to analyze</span><button class="primary-button" id="runAnalysisButton" data-i18n="runAnalysis">Run Stockfish analysis</button></div>
+      <div class="analysis-results" id="analysisResults" hidden>
+        <div class="analysis-summary"><div><strong id="bestCount">0</strong><span data-i18n="bestMoves">Best moves</span></div><div><strong id="mistakeCount">0</strong><span data-i18n="mistakes">Mistakes</span></div><div><strong id="missedCount">0</strong><span data-i18n="missedWins">Missed wins</span></div></div>
+        <div class="eval-chart"><div class="chart-heading"><span data-i18n="evaluation">Evaluation</span><span data-i18n="whiteAdvantage">White advantage ↑</span></div><canvas id="evaluationChart" width="840" height="300"></canvas></div>
+        <div class="analysis-list" id="analysisList"></div>
+      </div>
+    </section>
+  </div>
 
   <div class="rules-overlay" id="rulesOverlay" hidden>
     <section class="rules-dialog" id="rulesDialog" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
@@ -149,6 +176,7 @@
       </div>
     </section>
   </div>
-  <script src="app.js?v=20260823-3"></script>
+  <script src="assets/vendor/peerjs.min.js"></script>
+  <script src="app.js?v=20260823-4"></script>
 </body>
 </html>

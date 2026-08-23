@@ -1,6 +1,6 @@
 "use strict";
 
-function pieceAsset(color,type){return `assets/pieces/${color}${type.toUpperCase()}.svg`;}
+function pieceAsset(color,type){const folder=state.pieceSet==="cburnett"?"":`${state.pieceSet}/`;return `assets/pieces/${folder}${color}${type.toUpperCase()}.svg`;}
 const VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 const FILES = "abcdefgh";
 const START = ["br","bn","bb","bq","bk","bb","bn","br","bp","bp","bp","bp","bp","bp","bp","bp",...Array(32).fill(null),"wp","wp","wp","wp","wp","wp","wp","wp","wr","wn","wb","wq","wk","wb","wn","wr"];
@@ -20,8 +20,9 @@ let clockTimer = null;
 let stockfish = null;
 let stockfishReady = false;
 let pendingEngineMove = false;
+let peer=null,connection=null,onlineRole=null,lastPeerError=null;
 
-const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
+const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
 const TRANSLATIONS={
   en:{localEngineBadge:"Local engine",rules:"Rules",currentGame:"CURRENT GAME",vsAi:"Vs AI",twoPlayers:"Two players",playAs:"Play as",white:"White",black:"Black",random:"Random",aiEngine:"AI engine",localAi:"Local AI",aiStrength:"AI strength",casual:"Casual",balanced:"Balanced",sharp:"Sharp",timeControl:"Time control",moves:"Moves",played:"{count} played",emptyHistory:"Your game record will appear here.",newGame:"New game",undo:"Undo",privacy:"No account. No API key. Every move stays on this device.",quickGuide:"QUICK GUIDE",howToPlay:"How to play",basics:"Basics",pieces:"Pieces",special:"Special",ending:"Ending",protectKing:"Protect your king",protectKingText:"Win by checkmating the opposing king: attack it so there is no legal escape.",whiteFirst:"White moves first",whiteFirstText:"Players alternate one move at a time.",capturePieces:"Capture opposing pieces",capturePiecesText:"Move onto an occupied square when your piece can legally reach it.",answerCheck:"Answer every check",answerCheckText:"Move the king, block the attack, or capture the attacking piece.",rook:"Rook",rookText:"Any distance across ranks or files.",bishop:"Bishop",bishopText:"Any distance along diagonals.",queen:"Queen",queenText:"Moves like a rook and bishop.",knight:"Knight",knightText:"Moves in an L shape and can jump.",king:"King",kingText:"One square in any direction.",pawn:"Pawn",pawnText:"Moves forward, captures diagonally.",castling:"Castling",castlingText:"Move the king two squares toward an unmoved rook. The path must be clear and safe.",enPassant:"En passant",enPassantText:"A pawn may capture a neighboring pawn immediately after it advances two squares.",promotion:"Promotion",promotionText:"A pawn reaching the farthest rank becomes a queen, rook, bishop, or knight.",checkmate:"Checkmate",checkmateText:"The checked king has no legal response. The attacking player wins.",draw:"Draw",drawText:"Games can draw by stalemate, repetition, insufficient material, or the fifty-move rule.",time:"Time",timeText:"With a chess clock, running out of time loses the game unless checkmate is impossible.",you:"You",player1:"Player 1",player2:"Player 2",aiName:"AI",winnerWins:"{winner} wins",yourMove:"Your move",toMove:"{color} to move",kingInCheck:"{color} king is under attack",check:"Check",stockfishThinking:"Stockfish is thinking",localThinking:"Local AI is thinking",engineUnavailable:"Engine unavailable",engineHelp:"Choose Local AI or reload to retry",timeExpired:"Time expired",stalemate:"Stalemate",fiftyMove:"Fifty-move rule",repetition:"Threefold repetition",insufficient:"Insufficient material",promotePawn:"Promote pawn",levelColor:"Level {level} · {color}"},
@@ -38,9 +39,18 @@ const BEGINNER_TRANSLATIONS={
   zh:{beginnerTerms:"每位棋手都应了解的术语",checkQuestion:"什么是将军？",checkAnswer:"你的王正在受到攻击。下一步必须让王脱离危险。",checkmateQuestion:"什么是将死？",checkmateAnswer:"王被将军，并且没有任何合法着法可以解救。对局立即结束。",illegalQuestion:"什么是非法着法？",illegalAnswer:"棋子不能那样移动，或走后自己的王仍被将军，这步棋就是非法的。",kingCaptureQuestion:"需要吃掉王吗？",kingCaptureAnswer:"不需要。对局在将死时结束，也就是王可能被吃掉的前一步。",stalemateQuestion:"什么是逼和？",stalemateAnswer:"一方没有合法着法，但王并未被将军。对局判和，而不是胜利。"},
   hi:{beginnerTerms:"हर खिलाड़ी को जानने योग्य शब्द",checkQuestion:"शह क्या है?",checkAnswer:"आपके राजा पर हमला हो रहा है। अगली चाल में राजा को सुरक्षित करना जरूरी है।",checkmateQuestion:"शह-मात क्या है?",checkmateAnswer:"राजा शह में है और कोई भी वैध चाल उसे नहीं बचा सकती। खेल तुरंत समाप्त हो जाता है।",illegalQuestion:"चाल अवैध कब होती है?",illegalAnswer:"जब मोहरा उस तरह नहीं चल सकता या चाल के बाद अपना राजा शह में रहता है, तो चाल अवैध है।",kingCaptureQuestion:"क्या राजा को पकड़ा जाता है?",kingCaptureAnswer:"नहीं। खेल शह-मात पर, राजा के पकड़े जाने से एक चाल पहले, समाप्त हो जाता है।",stalemateQuestion:"स्टेलमेट क्या है?",stalemateAnswer:"खिलाड़ी के पास कोई वैध चाल नहीं है, लेकिन राजा शह में नहीं है। खेल ड्रॉ होता है।"}
 };
-function t(key,values={}){let text=BEGINNER_TRANSLATIONS[currentLanguage]?.[key]??TRANSLATIONS[currentLanguage]?.[key]??BEGINNER_TRANSLATIONS.en[key]??TRANSLATIONS.en[key]??key;for(const [name,value]of Object.entries(values))text=text.replace(`{${name}}`,value);return text;}
+const FEATURE_TRANSLATIONS={
+  en:{online:"Online",onlineGame:"Online game",notConnected:"Not connected",onlineHelp:"Create a private link, then send it to the other player.",createInvite:"Create invite link",waitingPlayer:"Waiting for player",connecting:"Connecting",connected:"Connected",opponent:"Opponent",copyInvite:"Copy invite link",copied:"Link copied",appearance:"Appearance",boardTheme:"Board",pieceSet:"Pieces",classic:"Classic",analyzeGame:"Analyze game",postGame:"POST-GAME",gameAnalysis:"Game analysis",readyToAnalyze:"Ready to analyze",runAnalysis:"Run Stockfish analysis",bestMoves:"Best moves",mistakes:"Mistakes",missedWins:"Missed wins",evaluation:"Evaluation",whiteAdvantage:"White advantage ↑",analysisUnavailable:"Analysis is available on the hosted version.",analyzing:"Analyzing move {current} of {total}",best:"Best",good:"Good",inaccuracy:"Inaccuracy",mistake:"Mistake",blunder:"Blunder",missedWin:"Missed win"},
+  es:{online:"En línea",onlineGame:"Partida en línea",notConnected:"Sin conexión",onlineHelp:"Crea un enlace privado y envíaselo al otro jugador.",createInvite:"Crear enlace de invitación",waitingPlayer:"Esperando jugador",connecting:"Conectando",connected:"Conectado",opponent:"Rival",copyInvite:"Copiar invitación",copied:"Enlace copiado",appearance:"Apariencia",boardTheme:"Tablero",pieceSet:"Piezas",classic:"Clásico",analyzeGame:"Analizar partida",postGame:"DESPUÉS DE LA PARTIDA",gameAnalysis:"Análisis de la partida",readyToAnalyze:"Listo para analizar",runAnalysis:"Ejecutar análisis de Stockfish",bestMoves:"Mejores jugadas",mistakes:"Errores",missedWins:"Victorias perdidas",evaluation:"Evaluación",whiteAdvantage:"Ventaja de blancas ↑",analysisUnavailable:"El análisis está disponible en la versión alojada.",analyzing:"Analizando jugada {current} de {total}",best:"Mejor",good:"Buena",inaccuracy:"Imprecisión",mistake:"Error",blunder:"Error grave",missedWin:"Victoria perdida"},
+  fr:{online:"En ligne",onlineGame:"Partie en ligne",notConnected:"Non connecté",onlineHelp:"Créez un lien privé, puis envoyez-le à l’autre joueur.",createInvite:"Créer un lien d’invitation",waitingPlayer:"En attente d’un joueur",connecting:"Connexion",connected:"Connecté",opponent:"Adversaire",copyInvite:"Copier l’invitation",copied:"Lien copié",appearance:"Apparence",boardTheme:"Échiquier",pieceSet:"Pièces",classic:"Classique",analyzeGame:"Analyser la partie",postGame:"APRÈS-PARTIE",gameAnalysis:"Analyse de la partie",readyToAnalyze:"Prêt à analyser",runAnalysis:"Lancer l’analyse Stockfish",bestMoves:"Meilleurs coups",mistakes:"Erreurs",missedWins:"Gains manqués",evaluation:"Évaluation",whiteAdvantage:"Avantage des Blancs ↑",analysisUnavailable:"L’analyse est disponible sur la version hébergée.",analyzing:"Analyse du coup {current} sur {total}",best:"Meilleur",good:"Bon",inaccuracy:"Imprécision",mistake:"Erreur",blunder:"Gaffe",missedWin:"Gain manqué"},
+  zh:{online:"在线",onlineGame:"在线对局",notConnected:"未连接",onlineHelp:"创建私人链接，然后发送给另一位玩家。",createInvite:"创建邀请链接",waitingPlayer:"等待玩家",connecting:"正在连接",connected:"已连接",opponent:"对手",copyInvite:"复制邀请链接",copied:"链接已复制",appearance:"外观",boardTheme:"棋盘",pieceSet:"棋子",classic:"经典",analyzeGame:"分析对局",postGame:"赛后",gameAnalysis:"对局分析",readyToAnalyze:"可以开始分析",runAnalysis:"运行 Stockfish 分析",bestMoves:"最佳着法",mistakes:"错误",missedWins:"错失胜机",evaluation:"局面评估",whiteAdvantage:"白方优势 ↑",analysisUnavailable:"分析功能可在托管版本中使用。",analyzing:"正在分析第 {current}/{total} 步",best:"最佳",good:"良好",inaccuracy:"不精确",mistake:"错误",blunder:"严重错误",missedWin:"错失胜机"},
+  hi:{online:"ऑनलाइन",onlineGame:"ऑनलाइन खेल",notConnected:"कनेक्ट नहीं",onlineHelp:"निजी लिंक बनाएँ और दूसरे खिलाड़ी को भेजें।",createInvite:"आमंत्रण लिंक बनाएँ",waitingPlayer:"खिलाड़ी की प्रतीक्षा",connecting:"कनेक्ट हो रहा है",connected:"कनेक्टेड",opponent:"प्रतिद्वंद्वी",copyInvite:"आमंत्रण कॉपी करें",copied:"लिंक कॉपी हुआ",appearance:"दिखावट",boardTheme:"बोर्ड",pieceSet:"मोहरें",classic:"क्लासिक",analyzeGame:"खेल का विश्लेषण",postGame:"खेल के बाद",gameAnalysis:"खेल विश्लेषण",readyToAnalyze:"विश्लेषण के लिए तैयार",runAnalysis:"Stockfish विश्लेषण चलाएँ",bestMoves:"सर्वश्रेष्ठ चालें",mistakes:"गलतियाँ",missedWins:"छूटी जीत",evaluation:"मूल्यांकन",whiteAdvantage:"सफ़ेद की बढ़त ↑",analysisUnavailable:"विश्लेषण होस्ट किए गए संस्करण पर उपलब्ध है।",analyzing:"चाल {current}/{total} का विश्लेषण",best:"सर्वश्रेष्ठ",good:"अच्छी",inaccuracy:"चूक",mistake:"गलती",blunder:"बड़ी गलती",missedWin:"छूटी जीत"}
+};
+function t(key,values={}){let text=FEATURE_TRANSLATIONS[currentLanguage]?.[key]??BEGINNER_TRANSLATIONS[currentLanguage]?.[key]??TRANSLATIONS[currentLanguage]?.[key]??FEATURE_TRANSLATIONS.en[key]??BEGINNER_TRANSLATIONS.en[key]??TRANSLATIONS.en[key]??key;for(const [name,value]of Object.entries(values))text=text.replace(`{${name}}`,value);return text;}
 function winnerTitle(winner){const templates={en:"{winner} wins",es:"Gana {winner}",fr:"Victoire de {winner}",zh:"{winner}获胜",hi:"{winner} की जीत"};return (templates[currentLanguage]||templates.en).replace("{winner}",winner);}
 function applyLanguage(){document.documentElement.lang=currentLanguage;$("languageSelect").value=currentLanguage;document.querySelectorAll("[data-i18n]").forEach(element=>{element.textContent=t(element.dataset.i18n);});const difficultyKey=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=difficultyKey;$("difficultyLabel").textContent=t(difficultyKey);applyPlayerLabels();render();}
+let currentTheme="forest";try{currentTheme=localStorage.getItem("quietKnightTheme")||"forest";state.pieceSet=localStorage.getItem("quietKnightPieces")||"cburnett";}catch{}
+function applyAppearance(){document.body.dataset.theme=currentTheme;document.querySelectorAll("[data-theme]").forEach(button=>button.classList.toggle("active",button.dataset.theme===currentTheme));document.querySelectorAll("[data-pieces]").forEach(button=>button.classList.toggle("active",button.dataset.pieces===state.pieceSet));if(state.board.length)renderBoard();}
 
 function clonePosition(s) { return { board: s.board.map(p => p ? { ...p } : null), turn: s.turn, enPassant: s.enPassant, castling: { ...s.castling }, halfmove: s.halfmove }; }
 function colorName(c) { return t(c === "w" ? "white" : "black"); }
@@ -57,8 +67,8 @@ function resetGame() {
   pendingEngineMove=false;
   if(stockfish){stockfishReady=false;stockfish.postMessage("stop");stockfish.postMessage("ucinewgame");stockfish.postMessage("isready");}
   [CAPTURE_AUDIO,CHECK_AUDIO,...Object.values(OUTCOME_AUDIO)].forEach(audio=>{try{audio.pause();if(audio.readyState>0)audio.currentTime=0;}catch{}});
-  state.playerColor=state.mode==="ai"?(state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice):"w";
-  state.flipped=state.mode==="ai"&&state.playerColor==="b";
+  if(state.mode==="ai")state.playerColor=state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice;else if(state.mode==="local")state.playerColor="w";
+  state.flipped=(state.mode==="ai"||state.mode==="online")&&state.playerColor==="b";
   const clock=CLOCKS[state.clockChoice];state.clocks={w:clock.seconds,b:clock.seconds};state.lastTick=clock.seconds===null?null:performance.now();
   state.board = START.map(code => code ? { color: code[0], type: code[1] } : null);
   Object.assign(state, { turn: "w", selected: null, legal: [], history: [], lastMove: null, busy: false, over: false, outcome: null, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() });
@@ -66,6 +76,7 @@ function resetGame() {
 }
 
 function isAiTurn(){return state.mode==="ai"&&state.turn!==state.playerColor;}
+function isRemoteTurn(){return state.mode==="online"&&(!connection?.open||state.turn!==state.playerColor);}
 function scheduleAiMove(){if(state.over||!isAiTurn())return;state.busy=true;render();aiTimer=setTimeout(()=>{aiTimer=null;updateClock();if(state.over)return;if(state.engineChoice==="local"){const move=chooseLocalAiMove();state.busy=false;if(move)commitMove(move);}else if(stockfishReady)requestStockfishMove();},260);}
 function startClock(){if(state.clocks.w===null)return;clockTimer=setInterval(()=>{updateClock();renderClocks();},200);}
 function updateClock(){
@@ -169,8 +180,8 @@ function gameResult(pos) {
 function resultDisplay(result) {
   if (!result) return null;
   if (!result.winner) return {title:t(result.titleKey),text:t(result.textKey)};
-  const winner = state.mode === "ai"
-    ? (result.winner === state.playerColor ? t("you") : (state.engineChoice === "stockfish" ? "Stockfish" : (currentLanguage==="es"||currentLanguage==="fr"?"IA":"AI")))
+  const winner = state.mode === "ai" || state.mode === "online"
+    ? (result.winner === state.playerColor ? t("you") : state.mode==="online"?t("opponent"):(state.engineChoice === "stockfish" ? "Stockfish" : (currentLanguage==="es"||currentLanguage==="fr"?"IA":"AI")))
     : (result.winner === "w" ? t("player1") : t("player2"));
   return { title: winnerTitle(winner), text: t(result.textKey) };
 }
@@ -227,11 +238,37 @@ function initStockfish(){
   catch{failStockfish();}
 }
 
-function commitMove(move, promotion = "q") {
+let analysisWorker=null,analysisBootResolve=null,analysisTask=null,analysisInfo=null;
+function initAnalysisEngine(){
+  if(location.protocol==="file:")return Promise.reject(new Error("hosted-only"));
+  if(analysisWorker)return Promise.resolve();
+  return new Promise((resolve,reject)=>{try{analysisWorker=new Worker("assets/stockfish/stockfish.js");analysisBootResolve=resolve;analysisWorker.onerror=()=>reject(new Error("engine"));analysisWorker.onmessage=event=>handleAnalysisLine(event.data);analysisWorker.postMessage("uci");}catch(error){reject(error);}});
+}
+function handleAnalysisLine(line){
+  if(typeof line!=="string")return;
+  if(line==="uciok"){analysisWorker.postMessage("setoption name Hash value 16");analysisWorker.postMessage("isready");return;}
+  if(line==="readyok"&&analysisBootResolve){const resolve=analysisBootResolve;analysisBootResolve=null;resolve();return;}
+  if(line.startsWith("info ")&&analysisTask){const score=line.match(/score (cp|mate) (-?\d+)/),pv=line.match(/\bpv ([a-h][1-8][a-h][1-8][qrbn]?)/);if(score){const raw=score[1]==="mate"?Math.sign(Number(score[2]))*1000:Number(score[2])/100;analysisInfo={raw,best:pv?.[1]||analysisInfo?.best||null};}return;}
+  if(line.startsWith("bestmove ")&&analysisTask){const resolve=analysisTask;analysisTask=null;const best=line.split(" ")[1];resolve({...analysisInfo,best:best&&best!=="(none)"?best:analysisInfo?.best||null});}
+}
+function analyzePosition(pos){return new Promise(resolve=>{analysisInfo={raw:0,best:null};analysisTask=result=>resolve({score:pos.turn==="w"?result.raw:-result.raw,best:result.best});analysisWorker.postMessage(`position fen ${positionFen(pos)}`);analysisWorker.postMessage("go movetime 120");});}
+function moveUci(entry){return entry.move?squareName(entry.move.from)+squareName(entry.move.to)+(entry.move.promotion||""):"";}
+function evaluationText(value){if(Math.abs(value)>=900)return value>0?"+M":"-M";return `${value>=0?"+":""}${value.toFixed(2)}`;}
+function classifyMove(entry,before,after){const moverSign=entry.color==="w"?1:-1,beforeMover=before.score*moverSign,afterMover=after.score*moverSign,loss=beforeMover-afterMover;if(beforeMover>=5&&afterMover<2)return"missedWin";if(moveUci(entry)===before.best)return"best";if(loss>=3)return"blunder";if(loss>=1.5)return"mistake";if(loss>=.75)return"inaccuracy";return"good";}
+function drawEvaluationGraph(values){const canvas=$("evaluationChart"),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,pad=24;ctx.clearRect(0,0,w,h);ctx.strokeStyle="#343936";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pad,h/2);ctx.lineTo(w-pad,h/2);ctx.stroke();if(values.length<2)return;ctx.strokeStyle="#d7f171";ctx.lineWidth=4;ctx.lineJoin="round";ctx.beginPath();values.forEach((value,index)=>{const x=pad+index*(w-pad*2)/(values.length-1),y=h/2-Math.max(-8,Math.min(8,value))*(h/2-pad)/8;index?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();}
+async function runGameAnalysis(){
+  const history=[...state.history],positions=history.map(entry=>clonePosition(entry.snapshot));positions.push(clonePosition(state));$("runAnalysisButton").disabled=true;
+  try{await initAnalysisEngine();const results=[];for(let i=0;i<positions.length;i++){$("analysisProgress").querySelector("span").textContent=t("analyzing",{current:i+1,total:positions.length});results.push(await analyzePosition(positions[i]));}
+    let best=0,mistakes=0,missed=0;const list=$("analysisList");list.innerHTML="";history.forEach((entry,index)=>{const label=classifyMove(entry,results[index],results[index+1]);if(label==="best")best++;if(label==="mistake"||label==="blunder")mistakes++;if(label==="missedWin")missed++;const row=document.createElement("div");row.className="analysis-move";const number=document.createElement("span");number.className="move-number";number.textContent=`${Math.floor(index/2)+1}${entry.color==="w"?".":"..."}`;const move=document.createElement("strong");move.textContent=entry.notation;const detail=document.createElement("div"),badge=document.createElement("span"),evaluation=document.createElement("span");badge.className=`analysis-label ${label==="missedWin"?"missed":label}`;badge.textContent=t(label);evaluation.textContent=` ${evaluationText(results[index].score)} → ${evaluationText(results[index+1].score)}`;detail.append(badge,evaluation);row.append(number,move,detail);list.appendChild(row);});
+    $("bestCount").textContent=best;$("mistakeCount").textContent=mistakes;$("missedCount").textContent=missed;$("analysisProgress").hidden=true;$("analysisResults").hidden=false;drawEvaluationGraph(results.map(result=>result.score));
+  }catch{$("analysisProgress").querySelector("span").textContent=t("analysisUnavailable");$("runAnalysisButton").disabled=false;}
+}
+
+function commitMove(move, promotion = "q", remote = false) {
   updateClock();if(state.over)return;
   const snapshot = { ...clonePosition(state), history: state.history.map(h => ({...h})), lastMove: state.lastMove, positions: new Map(state.positions), clocks: { ...state.clocks } };
   const before = clonePosition(state), after = applyMove(state, move, promotion);
-  Object.assign(state, after); state.history.push({ snapshot, notation: notation(before,move,after,promotion), color: before.turn, captured: move.capture || null });
+  Object.assign(state, after); state.history.push({ snapshot, notation: notation(before,move,after,promotion), color: before.turn, captured: move.capture || null, move:{from:move.from,to:move.to,promotion:move.promotion?promotion:null} });
   state.lastMove = { from: move.from, to: move.to }; state.selected=null; state.legal=[]; recordPosition();
   if(state.clocks[before.turn]!==null)state.clocks[before.turn]+=CLOCKS[state.clockChoice].increment;state.lastTick=state.clocks.w===null?null:performance.now();
   const result=gameResult(state);
@@ -239,11 +276,12 @@ function commitMove(move, promotion = "q") {
   else if(inCheck(state,state.turn))playCheckSound();
   else playTone(!!move.capture || move.enPassant);
   render();
+  if(state.mode==="online"&&!remote&&connection?.open)connection.send({type:"move",from:move.from,to:move.to,promotion,clocks:state.clocks});
   if(isAiTurn()&&!state.over)scheduleAiMove();
 }
 
 function handleSquare(index) {
-  if (state.busy || state.over || isAiTurn()) return;
+  if (state.busy || state.over || isAiTurn() || isRemoteTurn()) return;
   const targetMove=state.legal.find(m=>m.to===index);
   if(targetMove){ if(targetMove.promotion){ showPromotion(targetMove); return; } commitMove(targetMove); return; }
   if(state.board[index]?.color===state.turn){ state.selected=index; state.legal=legalMoves(state).filter(m=>m.from===index); } else { state.selected=null; state.legal=[]; }
@@ -278,12 +316,14 @@ function renderHistory() {
 function render() {
   renderBoard(); renderHistory(); renderClocks(); const result=state.outcome||gameResult(state), displayResult=resultDisplay(result), check=inCheck(state,state.turn);
   const engineFailed=state.engineChoice==="stockfish"&&state.engineError;
-  $("statusTitle").textContent=displayResult?.title || (engineFailed?t("engineUnavailable"):state.busy?t(state.engineChoice==="stockfish"?"stockfishThinking":"localThinking"):check?t("check"):state.mode==="ai"&&state.turn===state.playerColor?t("yourMove"):t("toMove",{color:colorName(state.turn)}));
-  $("statusText").textContent=displayResult?.text || (engineFailed?t("engineHelp"):check?t("kingInCheck",{color:colorName(state.turn)}):t("toMove",{color:colorName(state.turn)}));
+  const onlineWaiting=state.mode==="online"&&!connection?.open;
+  $("statusTitle").textContent=displayResult?.title || (onlineWaiting?t(onlineRole==="guest"?"connecting":"waitingPlayer"):engineFailed?t("engineUnavailable"):state.busy?t(state.engineChoice==="stockfish"?"stockfishThinking":"localThinking"):check?t("check"):(state.mode==="ai"||state.mode==="online")&&state.turn===state.playerColor?t("yourMove"):t("toMove",{color:colorName(state.turn)}));
+  $("statusText").textContent=displayResult?.text || (onlineWaiting?t("onlineHelp"):engineFailed?t("engineHelp"):check?t("kingInCheck",{color:colorName(state.turn)}):t("toMove",{color:colorName(state.turn)}));
   const bottomColor=state.mode==="ai"?state.playerColor:"w",topColor=opposite(bottomColor);
   $("whiteTurn").classList.toggle("active",state.turn===bottomColor&&!state.over);$("whiteTurn").setAttribute("aria-label",t("toMove",{color:colorName(bottomColor)}));
   $("blackTurn").classList.toggle("active",state.turn===topColor&&!state.over);$("blackTurn").setAttribute("aria-label",t("toMove",{color:colorName(topColor)}));
-  $("moveCount").textContent=t("played",{count:state.history.length}); $("undoButton").disabled=!state.history.length||state.busy;
+  $("moveCount").textContent=t("played",{count:state.history.length}); $("undoButton").disabled=!state.history.length||state.busy||state.mode==="online";
+  $("analysisButton").disabled=!state.over;
   const whiteCaps=state.history.filter(h=>h.color==="w"&&h.captured).map(h=>({color:"b",type:h.captured.type})); const blackCaps=state.history.filter(h=>h.color==="b"&&h.captured).map(h=>({color:"w",type:h.captured.type}));
   renderCaptured("whiteCaptured",bottomColor==="w"?whiteCaps:blackCaps);renderCaptured("blackCaptured",topColor==="w"?whiteCaps:blackCaps);
 }
@@ -323,17 +363,33 @@ function playCheckSound(){
 }
 function applyPlayerLabels(){
   const player=colorName(state.playerColor),ai=colorName(opposite(state.playerColor));
-  $("playerName").textContent=state.mode==="ai"?t("you"):t("player1");$("playerAvatar").textContent=state.mode==="ai"?"YOU":"P1";$("playerDetail").textContent=state.mode==="ai"?player:t("white");
-  $("opponentName").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"Stockfish":t("localAi")):t("player2");$("opponentAvatar").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"SF":"QK"):"P2";$("opponentDetail").textContent=state.mode==="ai"?t("levelColor",{level:state.depth,color:ai}):t("black");
+  const versus=state.mode==="ai"||state.mode==="online";
+  $("playerName").textContent=versus?t("you"):t("player1");$("playerAvatar").textContent=versus?"YOU":"P1";$("playerDetail").textContent=versus?player:t("white");
+  $("opponentName").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"Stockfish":t("localAi")):state.mode==="online"?t("opponent"):t("player2");$("opponentAvatar").textContent=state.mode==="ai"?(state.engineChoice==="stockfish"?"SF":"QK"):state.mode==="online"?"P2P":"P2";$("opponentDetail").textContent=state.mode==="ai"?t("levelColor",{level:state.depth,color:ai}):state.mode==="online"?ai:t("black");
 }
 function setMode(mode){
-  state.mode=mode;$("aiMode").classList.toggle("active",mode==="ai");$("localMode").classList.toggle("active",mode==="local");$("aiMode").setAttribute("aria-selected",mode==="ai");$("localMode").setAttribute("aria-selected",mode==="local");$("difficultySetting").hidden=mode!=="ai";
-  $("sideSetting").hidden=mode!=="ai";$("engineSetting").hidden=mode!=="ai";
+  state.mode=mode;for(const [id,value] of [["aiMode","ai"],["localMode","local"],["onlineMode","online"]]){$(id).classList.toggle("active",mode===value);$(id).setAttribute("aria-selected",mode===value);}$("difficultySetting").hidden=mode!=="ai";
+  $("sideSetting").hidden=mode!=="ai";$("engineSetting").hidden=mode!=="ai";$("onlineSetting").hidden=mode!=="online";
   resetGame();
 }
 
-$("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetGame; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
-$("aiMode").onclick=()=>setMode("ai"); $("localMode").onclick=()=>setMode("local"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const key=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=key;$("difficultyLabel").textContent=t(key);applyPlayerLabels();};
+function setConnectionState(key,connected=false){$("connectionState").textContent=t(key);$("connectionState").classList.toggle("connected",connected);render();}
+function closePeer(){try{connection?.close();peer?.destroy();}catch{}connection=null;peer=null;onlineRole=null;}
+function attachConnection(conn,role){connection=conn;onlineRole=role;state.playerColor=role==="host"?"w":"b";connection.on("open",()=>{setConnectionState("connected",true);resetGame();});connection.on("data",data=>{
+  if(!data||typeof data!=="object")return;
+  if(data.type==="move"&&Number.isInteger(data.from)&&Number.isInteger(data.to)){const move=legalMoves(state).find(candidate=>candidate.from===data.from&&candidate.to===data.to);if(move&&state.turn!==state.playerColor){commitMove(move,/^[qrbn]$/.test(data.promotion)?data.promotion:"q",true);if(data.clocks){state.clocks={w:data.clocks.w===null?null:Number(data.clocks.w),b:data.clocks.b===null?null:Number(data.clocks.b)};state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}}}
+  if(data.type==="reset")resetGame();
+});connection.on("close",()=>setConnectionState("notConnected"));connection.on("error",()=>setConnectionState("notConnected"));}
+function ensurePeer(){if(typeof Peer==="undefined"){setConnectionState("notConnected");return null;}closePeer();lastPeerError=null;const id=`quiet-knight-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`;peer=new Peer(id);peer.on("error",error=>{lastPeerError=`${error?.type||"unknown"}: ${error?.message||""}`;setConnectionState("notConnected");});return peer;}
+function createInvite(){setMode("online");state.playerColor="w";const instance=ensurePeer();if(!instance)return;onlineRole="host";setConnectionState("connecting");instance.on("open",id=>{const base=location.protocol==="file:"?"https://gabeliu.github.io/chess-ai/":`${location.origin}${location.pathname}`;$("inviteLink").value=`${base}?room=${encodeURIComponent(id)}`;$("inviteRow").hidden=false;setConnectionState("waitingPlayer");});instance.on("connection",conn=>attachConnection(conn,"host"));}
+function joinInvite(room){setMode("online");state.playerColor="b";const instance=ensurePeer();if(!instance)return;onlineRole="guest";setConnectionState("connecting");instance.on("open",()=>attachConnection(instance.connect(room,{reliable:true}),"guest"));}
+function resetAndShare(){resetGame();if(state.mode==="online"&&connection?.open)connection.send({type:"reset"});}
+
+$("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetAndShare; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
+$("aiMode").onclick=()=>{closePeer();setMode("ai");}; $("localMode").onclick=()=>{closePeer();setMode("local");}; $("onlineMode").onclick=()=>setMode("online"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const key=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=key;$("difficultyLabel").textContent=t(key);applyPlayerLabels();};
+$("createInviteButton").onclick=createInvite;$("copyInviteButton").onclick=async()=>{try{await navigator.clipboard.writeText($("inviteLink").value);setConnectionState("copied",true);setTimeout(()=>setConnectionState(connection?.open?"connected":"waitingPlayer",!!connection?.open),1200);}catch{}};
+document.querySelectorAll("[data-theme]").forEach(button=>button.onclick=()=>{currentTheme=button.dataset.theme;try{localStorage.setItem("quietKnightTheme",currentTheme);}catch{}applyAppearance();});
+document.querySelectorAll("[data-pieces]").forEach(button=>button.onclick=()=>{state.pieceSet=button.dataset.pieces;try{localStorage.setItem("quietKnightPieces",state.pieceSet);}catch{}applyAppearance();});
 $("languageSelect").addEventListener("input",event=>{currentLanguage=event.target.value;try{localStorage.setItem("quietKnightLanguage",currentLanguage);}catch{}applyLanguage();});
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
@@ -341,6 +397,9 @@ document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{st
 function openRules(){$("rulesOverlay").hidden=false;document.body.classList.add("rules-open");$("closeRulesButton").focus();}
 function closeRules(){$("rulesOverlay").hidden=true;document.body.classList.remove("rules-open");$("rulesButton").focus();}
 $("rulesButton").onclick=openRules;$("closeRulesButton").onclick=closeRules;$("rulesOverlay").onclick=event=>{if(event.target===$("rulesOverlay"))closeRules();};
+function openAnalysis(){$("analysisOverlay").hidden=false;document.body.classList.add("analysis-open");$("closeAnalysisButton").focus();}
+function closeAnalysis(){$("analysisOverlay").hidden=true;document.body.classList.remove("analysis-open");$("analysisButton").focus();}
+$("analysisButton").onclick=openAnalysis;$("closeAnalysisButton").onclick=closeAnalysis;$("analysisOverlay").onclick=event=>{if(event.target===$("analysisOverlay"))closeAnalysis();};$("runAnalysisButton").onclick=runGameAnalysis;
 document.querySelectorAll("[data-rules-tab]").forEach(button=>button.onclick=()=>{const tab=button.dataset.rulesTab;document.querySelectorAll("[data-rules-tab]").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-selected",active);});document.querySelectorAll("[data-rules-page]").forEach(page=>{const active=page.dataset.rulesPage===tab;page.classList.toggle("active",active);page.hidden=!active;});});
-document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("rulesOverlay").hidden)closeRules();});
-resetGame();applyLanguage();initStockfish();
+document.addEventListener("keydown",event=>{if(event.key!=="Escape")return;if(!$("rulesOverlay").hidden)closeRules();if(!$("analysisOverlay").hidden)closeAnalysis();});
+applyAppearance();resetGame();applyLanguage();initStockfish();const inviteRoom=new URLSearchParams(location.search).get("room");if(inviteRoom)joinInvite(inviteRoom);

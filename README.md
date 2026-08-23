@@ -14,6 +14,9 @@ A polished chess game with a fully local Stockfish AI opponent. It needs no API 
 - 1+0, 3+2, 10+0, and unlimited time controls
 - Beginner-friendly rules guide covering pieces, special moves, and endings
 - Interface translations for English, Spanish, French, Chinese, and Hindi
+- Private peer-to-peer invite links for playing on two devices
+- Local Stockfish game review with move labels and an evaluation graph
+- Three board palettes and three bundled Staunton piece sets
 - Complete legal move validation
 - Castling, en passant, and promotion
 - Check, checkmate, stalemate, repetition, fifty-move, and insufficient-material detection
@@ -27,7 +30,7 @@ A polished chess game with a fully local Stockfish AI opponent. It needs no API 
 
 Vanilla HTML, CSS, and JavaScript. Stockfish runs entirely in a browser Web Worker using WebAssembly.
 
-The bundled Cburnett Staunton piece artwork comes from the open-source [Lichess](https://github.com/lichess-org/lila/tree/master/public/piece/cburnett) project.
+The bundled Cburnett, Merida, and Alpha piece artwork comes from the open-source [Lichess](https://github.com/lichess-org/lila/tree/master/public/piece) project. Peer connections use the MIT-licensed [PeerJS](https://peerjs.com/) browser library and its public signaling service; moves travel directly between the two players after connection.
 
 ## Stockfish
 

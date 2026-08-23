@@ -107,8 +107,8 @@ button { color: inherit; }
 .appearance-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; align-items: center; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .theme-options { display: flex; gap: 8px; }
 .theme-swatch { width: 36px; height: 28px; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: transparent; cursor: pointer; }
-.theme-swatch span:first-child { background: var(--board-light); }
-.theme-swatch span:last-child { background: var(--board-dark); }
+.theme-swatch[data-theme="forest"] span:first-child { background: #d6d8c8; }
+.theme-swatch[data-theme="forest"] span:last-child { background: #63756b; }
 .theme-swatch[data-theme="walnut"] span:first-child { background: #e7cfaa; }
 .theme-swatch[data-theme="walnut"] span:last-child { background: #9a6845; }
 .theme-swatch[data-theme="ocean"] span:first-child { background: #d9e2e5; }

@@ -14,7 +14,7 @@ A polished chess game with a fully local Stockfish AI opponent. It needs no API 
 - 1+0, 3+2, 10+0, and unlimited time controls
 - Beginner-friendly rules guide covering pieces, special moves, and endings
 - Interface translations for English, Spanish, French, Chinese, and Hindi
-- Private invite links for playing on two devices through a free secure relay
+- Private invite links for playing on two devices through redundant free secure relays
 - Local Stockfish game review with move labels and an evaluation graph
 - Three board palettes and three bundled Staunton piece sets
 - Complete legal move validation

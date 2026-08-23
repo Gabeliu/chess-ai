@@ -20,9 +20,9 @@ let clockTimer = null;
 let stockfish = null;
 let stockfishReady = false;
 let pendingEngineMove = false;
-let relayClient=null,connection=null,onlineRole=null,connectionTimer=null,helloTimer=null,onlineClientId=null;
+let relayClients=[],connection=null,onlineRole=null,connectionTimer=null,helloTimer=null,onlineClientId=null,onlineMessageSeq=0,receivedOnlineMessages=new Set();
 
-const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
+const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", onlineSideChoice:"random", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
 const TRANSLATIONS={
   en:{localEngineBadge:"Local engine",rules:"Rules",currentGame:"CURRENT GAME",vsAi:"Vs AI",twoPlayers:"Two players",playAs:"Play as",white:"White",black:"Black",random:"Random",aiEngine:"AI engine",localAi:"Local AI",aiStrength:"AI strength",casual:"Casual",balanced:"Balanced",sharp:"Sharp",timeControl:"Time control",moves:"Moves",played:"{count} played",emptyHistory:"Your game record will appear here.",newGame:"New game",undo:"Undo",privacy:"No account. No API key. Every move stays on this device.",quickGuide:"QUICK GUIDE",howToPlay:"How to play",basics:"Basics",pieces:"Pieces",special:"Special",ending:"Ending",protectKing:"Protect your king",protectKingText:"Win by checkmating the opposing king: attack it so there is no legal escape.",whiteFirst:"White moves first",whiteFirstText:"Players alternate one move at a time.",capturePieces:"Capture opposing pieces",capturePiecesText:"Move onto an occupied square when your piece can legally reach it.",answerCheck:"Answer every check",answerCheckText:"Move the king, block the attack, or capture the attacking piece.",rook:"Rook",rookText:"Any distance across ranks or files.",bishop:"Bishop",bishopText:"Any distance along diagonals.",queen:"Queen",queenText:"Moves like a rook and bishop.",knight:"Knight",knightText:"Moves in an L shape and can jump.",king:"King",kingText:"One square in any direction.",pawn:"Pawn",pawnText:"Moves forward, captures diagonally.",castling:"Castling",castlingText:"Move the king two squares toward an unmoved rook. The path must be clear and safe.",enPassant:"En passant",enPassantText:"A pawn may capture a neighboring pawn immediately after it advances two squares.",promotion:"Promotion",promotionText:"A pawn reaching the farthest rank becomes a queen, rook, bishop, or knight.",checkmate:"Checkmate",checkmateText:"The checked king has no legal response. The attacking player wins.",draw:"Draw",drawText:"Games can draw by stalemate, repetition, insufficient material, or the fifty-move rule.",time:"Time",timeText:"With a chess clock, running out of time loses the game unless checkmate is impossible.",you:"You",player1:"Player 1",player2:"Player 2",aiName:"AI",winnerWins:"{winner} wins",yourMove:"Your move",toMove:"{color} to move",kingInCheck:"{color} king is under attack",check:"Check",stockfishThinking:"Stockfish is thinking",localThinking:"Local AI is thinking",engineUnavailable:"Engine unavailable",engineHelp:"Choose Local AI or reload to retry",timeExpired:"Time expired",stalemate:"Stalemate",fiftyMove:"Fifty-move rule",repetition:"Threefold repetition",insufficient:"Insufficient material",promotePawn:"Promote pawn",levelColor:"Level {level} · {color}"},
@@ -66,6 +66,7 @@ function idx(r, c) { return r * 8 + c; }
 function inside(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 function squareName(i) { const [r, c] = rc(i); return FILES[c] + (8 - r); }
 function opposite(c) { return c === "w" ? "b" : "w"; }
+function randomColor(){const value=new Uint8Array(1);crypto.getRandomValues(value);return value[0]%2?"w":"b";}
 
 function resetGame() {
   if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
@@ -74,7 +75,7 @@ function resetGame() {
   pendingEngineMove=false;
   if(stockfish){stockfishReady=false;stockfish.postMessage("stop");stockfish.postMessage("ucinewgame");stockfish.postMessage("isready");}
   [CAPTURE_AUDIO,CHECK_AUDIO,...Object.values(OUTCOME_AUDIO)].forEach(audio=>{try{audio.pause();if(audio.readyState>0)audio.currentTime=0;}catch{}});
-  if(state.mode==="ai")state.playerColor=state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice;else if(state.mode==="local")state.playerColor="w";
+  if(state.mode==="ai")state.playerColor=state.sideChoice==="random"?randomColor():state.sideChoice;else if(state.mode==="local")state.playerColor="w";
   state.flipped=(state.mode==="ai"||state.mode==="online")&&state.playerColor==="b";
   const clock=CLOCKS[state.clockChoice];state.clocks={w:clock.seconds,b:clock.seconds};state.lastTick=clock.seconds===null?null:performance.now();
   state.board = START.map(code => code ? { color: code[0], type: code[1] } : null);
@@ -377,13 +378,14 @@ function applyPlayerLabels(){
 function setMode(mode){
   state.mode=mode;for(const [id,value] of [["aiMode","ai"],["localMode","local"],["onlineMode","online"]]){$(id).classList.toggle("active",mode===value);$(id).setAttribute("aria-selected",mode===value);}$("difficultySetting").hidden=mode!=="ai";
   $("sideSetting").hidden=mode!=="ai"&&mode!=="online";$("engineSetting").hidden=mode!=="ai";$("onlineSetting").hidden=mode!=="online";
+  const sideChoice=mode==="online"?state.onlineSideChoice:state.sideChoice;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item.dataset.side===sideChoice));
   resetGame();
 }
 
 function setConnectionState(key,connected=false){$("connectionState").textContent=t(key);$("connectionState").classList.toggle("connected",connected);render();}
 function stopConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null;}if(helloTimer){clearInterval(helloTimer);helloTimer=null;}}
 function pauseOnlineClock(){if(clockTimer){clearInterval(clockTimer);clockTimer=null;}state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}
-function closeOnline(){stopConnectionTimer();if(relayClient){relayClient.removeAllListeners();try{relayClient.end(true);}catch{}}connection=null;relayClient=null;onlineRole=null;onlineClientId=null;}
+function closeOnline(){stopConnectionTimer();for(const client of relayClients){client.removeAllListeners();try{client.end(true);}catch{}}connection=null;relayClients=[];onlineRole=null;onlineClientId=null;onlineMessageSeq=0;receivedOnlineMessages.clear();}
 function connectionFailed(){closeOnline();pauseOnlineClock();$("createInviteButton").disabled=false;setConnectionState("connectionFailed");}
 function handleOnlineData(data){
   if(!data||typeof data!=="object")return;
@@ -393,16 +395,15 @@ function handleOnlineData(data){
 function connectRelay(room,role,hostColor){
   if(typeof mqtt==="undefined"||!/^[a-zA-Z0-9-]{8,100}$/.test(room)){connectionFailed();return;}
   closeOnline();onlineRole=role;onlineClientId=`qk-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`;
-  const topic=`quiet-knight/v1/${room}`;
-  relayClient=mqtt.connect("wss://broker.emqx.io:8084/mqtt",{clientId:onlineClientId,clean:true,connectTimeout:12000,reconnectPeriod:2000,keepalive:30});
-  connection={open:false,send(data){if(relayClient?.connected)relayClient.publish(topic,JSON.stringify({...data,sender:onlineClientId}),{qos:1});},close(){closeOnline();}};
+  const topic=`quiet-knight/v1/${room}`,brokers=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
+  connection={open:false,send(data){const message=JSON.stringify({...data,sender:onlineClientId,messageId:`${onlineClientId}-${++onlineMessageSeq}`});for(const client of relayClients)if(client.connected)client.publish(topic,message,{qos:1});},close(){closeOnline();}};
   const markConnected=()=>{if(connection?.open)return;connection.open=true;stopConnectionTimer();$("createInviteButton").hidden=true;setConnectionState("connected",true);resetGame();};
-  relayClient.on("connect",()=>relayClient.subscribe(topic,{qos:1},error=>{if(error){connectionFailed();return;}if(role==="host")setConnectionState("waitingPlayer");else{connection.send({type:"hello"});helloTimer=setInterval(()=>{if(!connection?.open)connection?.send({type:"hello"});},2000);}}));
-  relayClient.on("message",(_,payload)=>{let data;try{data=JSON.parse(payload.toString());}catch{return;}if(!data||data.sender===onlineClientId)return;if(role==="host"&&data.type==="hello"){markConnected();connection?.send({type:"ready",hostColor});return;}if(role==="guest"&&data.type==="ready"){markConnected();return;}if(connection?.open)handleOnlineData(data);});
-  relayClient.on("error",()=>{});relayClient.on("close",()=>{if(state.mode==="online"&&connection?.open)connectionFailed();});
-  connectionTimer=setTimeout(()=>{if(!connection?.open)connectionFailed();},20000);
+  const receive=(_,payload)=>{let data;try{data=JSON.parse(payload.toString());}catch{return;}if(!data||data.sender===onlineClientId||data.messageId&&receivedOnlineMessages.has(data.messageId))return;if(data.messageId){receivedOnlineMessages.add(data.messageId);if(receivedOnlineMessages.size>200)receivedOnlineMessages.delete(receivedOnlineMessages.values().next().value);}if(role==="host"&&data.type==="hello"){markConnected();connection?.send({type:"ready",hostColor});return;}if(role==="guest"&&data.type==="ready"){markConnected();return;}if(connection?.open)handleOnlineData(data);};
+  for(const [index,url] of brokers.entries()){const client=mqtt.connect(url,{clientId:`${onlineClientId}-${index}`,clean:true,connectTimeout:12000,reconnectPeriod:2500,keepalive:30});relayClients.push(client);client.on("connect",()=>client.subscribe(topic,{qos:1},error=>{if(error)return;if(role==="host"&&!connection?.open)setConnectionState("waitingPlayer");else if(role==="guest"&&!connection?.open)connection.send({type:"hello"});}));client.on("message",receive);client.on("error",()=>{});}
+  if(role==="guest")helloTimer=setInterval(()=>{if(!connection?.open)connection?.send({type:"hello"});},2000);
+  connectionTimer=setTimeout(()=>{if(!connection?.open)connectionFailed();},30000);
 }
-function createInvite(){setMode("online");const hostColor=state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice,room=`qk-${crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}`;state.playerColor=hostColor;state.flipped=hostColor==="b";applyPlayerLabels();renderBoard();$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("createInvite");$("createInviteButton").onclick=createInvite;$("onlineHelp").textContent=t("onlineHelp");const base=location.protocol==="file:"?"https://gabeliu.github.io/chess-ai/":`${location.origin}${location.pathname}`;$("inviteLink").value=`${base}?room=${encodeURIComponent(room)}&host=${hostColor}`;$("inviteRow").hidden=false;setConnectionState("connecting");connectRelay(room,"host",hostColor);}
+function createInvite(){setMode("online");const hostColor=state.onlineSideChoice==="random"?randomColor():state.onlineSideChoice,room=`qk-${crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}`;state.playerColor=hostColor;state.flipped=hostColor==="b";applyPlayerLabels();renderBoard();$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("createInvite");$("createInviteButton").onclick=createInvite;$("onlineHelp").textContent=t("onlineHelp");const base=location.protocol==="file:"?"https://gabeliu.github.io/chess-ai/":`${location.origin}${location.pathname}`;$("inviteLink").value=`${base}?room=${encodeURIComponent(room)}&host=${hostColor}`;$("inviteRow").hidden=false;setConnectionState("connecting");connectRelay(room,"host",hostColor);}
 function joinInvite(room,hostColor="w"){setMode("online");hostColor=hostColor==="b"?"b":"w";state.playerColor=opposite(hostColor);state.flipped=state.playerColor==="b";$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("retryConnection");$("createInviteButton").onclick=()=>joinInvite(room,hostColor);$("onlineHelp").textContent=t("guestHelp");setConnectionState("connecting");connectRelay(room,"guest",hostColor);}
 function resetAndShare(){resetGame();if(state.mode==="online"&&connection?.open)connection.send({type:"reset",clockChoice:state.clockChoice});}
 function setClockChoice(choice,share=true){
@@ -416,7 +417,7 @@ $("createInviteButton").onclick=createInvite;$("copyInviteButton").onclick=async
 document.querySelectorAll("[data-theme]").forEach(button=>button.onclick=()=>{currentTheme=button.dataset.theme;try{localStorage.setItem("quietKnightTheme",currentTheme);}catch{}applyAppearance();});
 document.querySelectorAll("[data-pieces]").forEach(button=>button.onclick=()=>{state.pieceSet=button.dataset.pieces;try{localStorage.setItem("quietKnightPieces",state.pieceSet);}catch{}applyAppearance();});
 $("languageSelect").addEventListener("input",event=>{currentLanguage=event.target.value;try{localStorage.setItem("quietKnightLanguage",currentLanguage);}catch{}applyLanguage();});
-document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
+document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{if(state.mode==="online")state.onlineSideChoice=button.dataset.side;else state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>setClockChoice(button.dataset.clock));
 function openRules(){$("rulesOverlay").hidden=false;document.body.classList.add("rules-open");$("closeRulesButton").focus();}

@@ -20,7 +20,7 @@ let clockTimer = null;
 let stockfish = null;
 let stockfishReady = false;
 let pendingEngineMove = false;
-let relayClients=[],connection=null,onlineRole=null,connectionTimer=null,helloTimer=null,onlineClientId=null,onlineMessageSeq=0,receivedOnlineMessages=new Set();
+let relayClients=[],ntfySocket=null,ntfyReady=false,connection=null,onlineRole=null,connectionTimer=null,helloTimer=null,onlineClientId=null,onlineMessageSeq=0,receivedOnlineMessages=new Set();
 
 const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", onlineSideChoice:"random", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
 const $ = (id) => document.getElementById(id);
@@ -385,7 +385,7 @@ function setMode(mode){
 function setConnectionState(key,connected=false){$("connectionState").textContent=t(key);$("connectionState").classList.toggle("connected",connected);render();}
 function stopConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null;}if(helloTimer){clearInterval(helloTimer);helloTimer=null;}}
 function pauseOnlineClock(){if(clockTimer){clearInterval(clockTimer);clockTimer=null;}state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}
-function closeOnline(){stopConnectionTimer();for(const client of relayClients){client.removeAllListeners();try{client.end(true);}catch{}}connection=null;relayClients=[];onlineRole=null;onlineClientId=null;onlineMessageSeq=0;receivedOnlineMessages.clear();}
+function closeOnline(){stopConnectionTimer();for(const client of relayClients){client.removeAllListeners();try{client.end(true);}catch{}}if(ntfySocket){ntfySocket.onclose=null;ntfySocket.onerror=null;ntfySocket.close();}connection=null;relayClients=[];ntfySocket=null;ntfyReady=false;onlineRole=null;onlineClientId=null;onlineMessageSeq=0;receivedOnlineMessages.clear();}
 function connectionFailed(){closeOnline();pauseOnlineClock();$("createInviteButton").disabled=false;setConnectionState("connectionFailed");}
 function handleOnlineData(data){
   if(!data||typeof data!=="object")return;
@@ -395,10 +395,11 @@ function handleOnlineData(data){
 function connectRelay(room,role,hostColor){
   if(typeof mqtt==="undefined"||!/^[a-zA-Z0-9-]{8,100}$/.test(room)){connectionFailed();return;}
   closeOnline();onlineRole=role;onlineClientId=`qk-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`;
-  const topic=`quiet-knight/v1/${room}`,brokers=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
-  connection={open:false,send(data){const message=JSON.stringify({...data,sender:onlineClientId,messageId:`${onlineClientId}-${++onlineMessageSeq}`});for(const client of relayClients)if(client.connected)client.publish(topic,message,{qos:1});},close(){closeOnline();}};
+  const topic=`quiet-knight/v1/${room}`,ntfyTopic=`quiet-knight-${room}`,brokers=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
+  connection={open:false,send(data){const message=JSON.stringify({...data,sender:onlineClientId,messageId:`${onlineClientId}-${++onlineMessageSeq}`});for(const client of relayClients)if(client.connected)client.publish(topic,message,{qos:1});if(ntfyReady)fetch(`https://ntfy.sh/${ntfyTopic}?cache=no&firebase=no`,{method:"POST",body:message}).catch(()=>{});},close(){closeOnline();}};
   const markConnected=()=>{if(connection?.open)return;connection.open=true;stopConnectionTimer();$("createInviteButton").hidden=true;setConnectionState("connected",true);resetGame();};
   const receive=(_,payload)=>{let data;try{data=JSON.parse(payload.toString());}catch{return;}if(!data||data.sender===onlineClientId||data.messageId&&receivedOnlineMessages.has(data.messageId))return;if(data.messageId){receivedOnlineMessages.add(data.messageId);if(receivedOnlineMessages.size>200)receivedOnlineMessages.delete(receivedOnlineMessages.values().next().value);}if(role==="host"&&data.type==="hello"){markConnected();connection?.send({type:"ready",hostColor});return;}if(role==="guest"&&data.type==="ready"){markConnected();return;}if(connection?.open)handleOnlineData(data);};
+  ntfySocket=new WebSocket(`wss://ntfy.sh/${ntfyTopic}/ws?since=10s`);ntfySocket.onmessage=event=>{let envelope;try{envelope=JSON.parse(event.data);}catch{return;}if(envelope.event==="open"){ntfyReady=true;if(role==="host"&&!connection?.open)setConnectionState("waitingPlayer");else if(role==="guest"&&!connection?.open)connection.send({type:"hello"});return;}if(envelope.event==="message")receive(null,{toString:()=>envelope.message});};ntfySocket.onerror=()=>{};
   for(const [index,url] of brokers.entries()){const client=mqtt.connect(url,{clientId:`${onlineClientId}-${index}`,clean:true,connectTimeout:12000,reconnectPeriod:2500,keepalive:30});relayClients.push(client);client.on("connect",()=>client.subscribe(topic,{qos:1},error=>{if(error)return;if(role==="host"&&!connection?.open)setConnectionState("waitingPlayer");else if(role==="guest"&&!connection?.open)connection.send({type:"hello"});}));client.on("message",receive);client.on("error",()=>{});}
   if(role==="guest")helloTimer=setInterval(()=>{if(!connection?.open)connection?.send({type:"hello"});},2000);
   connectionTimer=setTimeout(()=>{if(!connection?.open)connectionFailed();},30000);

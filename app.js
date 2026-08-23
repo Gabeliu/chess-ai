@@ -388,7 +388,7 @@ function connectionFailed(){closeOnline();pauseOnlineClock();$("createInviteButt
 function handleOnlineData(data){
   if(!data||typeof data!=="object")return;
   if(data.type==="move"&&Number.isInteger(data.from)&&Number.isInteger(data.to)){const move=legalMoves(state).find(candidate=>candidate.from===data.from&&candidate.to===data.to);if(move&&state.turn!==state.playerColor){commitMove(move,/^[qrbn]$/.test(data.promotion)?data.promotion:"q",true);if(data.clocks){state.clocks={w:data.clocks.w===null?null:Number(data.clocks.w),b:data.clocks.b===null?null:Number(data.clocks.b)};state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}}}
-  if(data.type==="reset")resetGame();
+  if(data.type==="reset"){if(CLOCKS[data.clockChoice])setClockChoice(data.clockChoice,false);else resetGame();}
 }
 function connectRelay(room,role,hostColor){
   if(typeof mqtt==="undefined"||!/^[a-zA-Z0-9-]{8,100}$/.test(room)){connectionFailed();return;}
@@ -404,7 +404,11 @@ function connectRelay(room,role,hostColor){
 }
 function createInvite(){setMode("online");const hostColor=state.sideChoice==="random"?(Math.random()<.5?"w":"b"):state.sideChoice,room=`qk-${crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}`;state.playerColor=hostColor;state.flipped=hostColor==="b";applyPlayerLabels();renderBoard();$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("createInvite");$("createInviteButton").onclick=createInvite;$("onlineHelp").textContent=t("onlineHelp");const base=location.protocol==="file:"?"https://gabeliu.github.io/chess-ai/":`${location.origin}${location.pathname}`;$("inviteLink").value=`${base}?room=${encodeURIComponent(room)}&host=${hostColor}`;$("inviteRow").hidden=false;setConnectionState("connecting");connectRelay(room,"host",hostColor);}
 function joinInvite(room,hostColor="w"){setMode("online");hostColor=hostColor==="b"?"b":"w";state.playerColor=opposite(hostColor);state.flipped=state.playerColor==="b";$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("retryConnection");$("createInviteButton").onclick=()=>joinInvite(room,hostColor);$("onlineHelp").textContent=t("guestHelp");setConnectionState("connecting");connectRelay(room,"guest",hostColor);}
-function resetAndShare(){resetGame();if(state.mode==="online"&&connection?.open)connection.send({type:"reset"});}
+function resetAndShare(){resetGame();if(state.mode==="online"&&connection?.open)connection.send({type:"reset",clockChoice:state.clockChoice});}
+function setClockChoice(choice,share=true){
+  if(!CLOCKS[choice])return;state.clockChoice=choice;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item.dataset.clock===choice));resetGame();
+  if(share&&state.mode==="online"&&connection?.open)connection.send({type:"reset",clockChoice:choice});
+}
 
 $("brandHome").onclick=(event)=>{event.preventDefault();window.location.reload();}; $("newGameButton").onclick=resetAndShare; $("undoButton").onclick=undo; $("flipButton").onclick=()=>{state.flipped=!state.flipped;renderBoard();}; $("soundButton").onclick=()=>{state.sound=!state.sound;if(!state.sound){CHECK_AUDIO.pause();CHECK_AUDIO.currentTime=0;if(checkAudioTimer){clearTimeout(checkAudioTimer);checkAudioTimer=null;}}$("soundButton").textContent=state.sound?"♪":"×";$("soundButton").setAttribute("aria-label",state.sound?"Mute sound":"Enable sound");};
 $("aiMode").onclick=()=>{closeOnline();setMode("ai");}; $("localMode").onclick=()=>{closeOnline();setMode("local");}; $("onlineMode").onclick=()=>setMode("online"); $("difficulty").oninput=(e)=>{state.depth=Number(e.target.value);const key=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=key;$("difficultyLabel").textContent=t(key);applyPlayerLabels();};
@@ -414,7 +418,7 @@ document.querySelectorAll("[data-pieces]").forEach(button=>button.onclick=()=>{s
 $("languageSelect").addEventListener("input",event=>{currentLanguage=event.target.value;try{localStorage.setItem("quietKnightLanguage",currentLanguage);}catch{}applyLanguage();});
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
-document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>{state.clockChoice=button.dataset.clock;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
+document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>setClockChoice(button.dataset.clock));
 function openRules(){$("rulesOverlay").hidden=false;document.body.classList.add("rules-open");$("closeRulesButton").focus();}
 function closeRules(){$("rulesOverlay").hidden=true;document.body.classList.remove("rules-open");$("rulesButton").focus();}
 $("rulesButton").onclick=openRules;$("closeRulesButton").onclick=closeRules;$("rulesOverlay").onclick=event=>{if(event.target===$("rulesOverlay"))closeRules();};

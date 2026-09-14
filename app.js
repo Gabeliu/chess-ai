@@ -21,8 +21,9 @@ let stockfish = null;
 let stockfishReady = false;
 let pendingEngineMove = false;
 let relayClients=[],ntfySocket=null,ntfyEvents=null,ntfyReady=false,connection=null,onlineRole=null,connectionTimer=null,helloTimer=null,onlineClientId=null,onlineMessageSeq=0,receivedOnlineMessages=new Set();
+let heartbeatTimer=null,watchdogTimer=null,lastPeerSeen=0,peerDisconnected=false,pendingClockSwitch=null,boardNoticeTimeout=null,boardNoticePersistentText=null;
 
-const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", onlineSideChoice:"random", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() };
+const state = { board: [], turn: "w", selected: null, legal: [], history: [], lastMove: null, mode: "ai", engineChoice: "stockfish", depth: 2, sideChoice: "w", onlineSideChoice:"random", playerColor: "w", clockChoice: "unlimited", pieceSet:"cburnett", clocks: { w: null, b: null }, lastTick: null, flipped: false, busy: false, over: false, outcome: null, engineError: false, sound: true, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map(), clockReady: true, localReady: true, remoteReady: true };
 const $ = (id) => document.getElementById(id);
 const TRANSLATIONS={
   en:{localEngineBadge:"Local engine",rules:"Rules",currentGame:"CURRENT GAME",vsAi:"Vs AI",twoPlayers:"Two players",playAs:"Play as",white:"White",black:"Black",random:"Random",aiEngine:"AI engine",localAi:"Local AI",aiStrength:"AI strength",casual:"Casual",balanced:"Balanced",sharp:"Sharp",timeControl:"Time control",moves:"Moves",played:"{count} played",emptyHistory:"Your game record will appear here.",newGame:"New game",undo:"Undo",privacy:"No account. No API key. Every move stays on this device.",quickGuide:"QUICK GUIDE",howToPlay:"How to play",basics:"Basics",pieces:"Pieces",special:"Special",ending:"Ending",protectKing:"Protect your king",protectKingText:"Win by checkmating the opposing king: attack it so there is no legal escape.",whiteFirst:"White moves first",whiteFirstText:"Players alternate one move at a time.",capturePieces:"Capture opposing pieces",capturePiecesText:"Move onto an occupied square when your piece can legally reach it.",answerCheck:"Answer every check",answerCheckText:"Move the king, block the attack, or capture the attacking piece.",rook:"Rook",rookText:"Any distance across ranks or files.",bishop:"Bishop",bishopText:"Any distance along diagonals.",queen:"Queen",queenText:"Moves like a rook and bishop.",knight:"Knight",knightText:"Moves in an L shape and can jump.",king:"King",kingText:"One square in any direction.",pawn:"Pawn",pawnText:"Moves forward, captures diagonally.",castling:"Castling",castlingText:"Move the king two squares toward an unmoved rook. The path must be clear and safe.",enPassant:"En passant",enPassantText:"A pawn may capture a neighboring pawn immediately after it advances two squares.",promotion:"Promotion",promotionText:"A pawn reaching the farthest rank becomes a queen, rook, bishop, or knight.",checkmate:"Checkmate",checkmateText:"The checked king has no legal response. The attacking player wins.",draw:"Draw",drawText:"Games can draw by stalemate, repetition, insufficient material, or the fifty-move rule.",time:"Time",timeText:"With a chess clock, running out of time loses the game unless checkmate is impossible.",you:"You",player1:"Player 1",player2:"Player 2",aiName:"AI",winnerWins:"{winner} wins",yourMove:"Your move",toMove:"{color} to move",kingInCheck:"{color} king is under attack",check:"Check",stockfishThinking:"Stockfish is thinking",localThinking:"Local AI is thinking",engineUnavailable:"Engine unavailable",engineHelp:"Choose Local AI or reload to retry",timeExpired:"Time expired",stalemate:"Stalemate",fiftyMove:"Fifty-move rule",repetition:"Threefold repetition",insufficient:"Insufficient material",promotePawn:"Promote pawn",levelColor:"Level {level} · {color}"},
@@ -53,9 +54,16 @@ const CONNECTION_TRANSLATIONS={
   zh:{connectionFailed:"连接失败",retryConnection:"重新连接",guestHelp:"重新连接主机时请保持此页面打开。"},
   hi:{connectionFailed:"कनेक्शन विफल",retryConnection:"फिर कनेक्ट करें",guestHelp:"होस्ट से दोबारा जुड़ते समय यह पेज खुला रखें।"}
 };
-function t(key,values={}){let text=CONNECTION_TRANSLATIONS[currentLanguage]?.[key]??FEATURE_TRANSLATIONS[currentLanguage]?.[key]??BEGINNER_TRANSLATIONS[currentLanguage]?.[key]??TRANSLATIONS[currentLanguage]?.[key]??CONNECTION_TRANSLATIONS.en[key]??FEATURE_TRANSLATIONS.en[key]??BEGINNER_TRANSLATIONS.en[key]??TRANSLATIONS.en[key]??key;for(const [name,value]of Object.entries(values))text=text.replace(`{${name}}`,value);return text;}
+const READY_TRANSLATIONS={
+  en:{readyTitle:"Ready to start the clock?",readyHelp:"The timer won't run until everyone is ready.",readyButton:"I'm ready",bothReady:"Both ready — start",waitingForOpponentReady:"Waiting for opponent to be ready…",opponentReadyWaitingYou:"Opponent is ready. Start when you are.",opponentDisconnected:"Opponent disconnected",switchTimeControlTitle:"Switch time control?",switchTimeControlText:"This will end the current game as a forfeit and start a new one.",switchAndForfeit:"Forfeit & switch",cancel:"Cancel",opponentSwitchedClock:"Opponent switched the time control. New game started."},
+  es:{readyTitle:"¿Listo para iniciar el reloj?",readyHelp:"El reloj no correrá hasta que todos estén listos.",readyButton:"Estoy listo",bothReady:"Ambos listos — empezar",waitingForOpponentReady:"Esperando a que el rival esté listo…",opponentReadyWaitingYou:"El rival está listo. Empieza cuando quieras.",opponentDisconnected:"Rival desconectado",switchTimeControlTitle:"¿Cambiar el control de tiempo?",switchTimeControlText:"Esto terminará la partida actual como abandono y comenzará una nueva.",switchAndForfeit:"Abandonar y cambiar",cancel:"Cancelar",opponentSwitchedClock:"El rival cambió el control de tiempo. Nueva partida iniciada."},
+  fr:{readyTitle:"Prêt à démarrer l’horloge ?",readyHelp:"L’horloge ne démarrera que lorsque tout le monde sera prêt.",readyButton:"Je suis prêt",bothReady:"Les deux prêts — commencer",waitingForOpponentReady:"En attente que l’adversaire soit prêt…",opponentReadyWaitingYou:"L’adversaire est prêt. Commencez quand vous voulez.",opponentDisconnected:"Adversaire déconnecté",switchTimeControlTitle:"Changer la cadence ?",switchTimeControlText:"Cela mettra fin à la partie en cours par abandon et en démarrera une nouvelle.",switchAndForfeit:"Abandonner et changer",cancel:"Annuler",opponentSwitchedClock:"L’adversaire a changé la cadence. Nouvelle partie commencée."},
+  zh:{readyTitle:"准备好开始计时了吗？",readyHelp:"双方都准备好后计时器才会开始。",readyButton:"我准备好了",bothReady:"双方都准备好 — 开始",waitingForOpponentReady:"等待对手准备…",opponentReadyWaitingYou:"对手已准备好，您可以开始了。",opponentDisconnected:"对手已断开连接",switchTimeControlTitle:"切换时间控制？",switchTimeControlText:"这将以判负方式结束当前对局并开始新对局。",switchAndForfeit:"判负并切换",cancel:"取消",opponentSwitchedClock:"对手切换了时间控制，已开始新对局。"},
+  hi:{readyTitle:"क्या घड़ी शुरू करने के लिए तैयार हैं?",readyHelp:"जब तक सभी तैयार नहीं होंगे, घड़ी नहीं चलेगी।",readyButton:"मैं तैयार हूँ",bothReady:"दोनों तैयार — शुरू करें",waitingForOpponentReady:"प्रतिद्वंद्वी के तैयार होने की प्रतीक्षा…",opponentReadyWaitingYou:"प्रतिद्वंद्वी तैयार है। जब चाहें शुरू करें।",opponentDisconnected:"प्रतिद्वंद्वी डिस्कनेक्ट हो गया",switchTimeControlTitle:"समय नियंत्रण बदलें?",switchTimeControlText:"इससे मौजूदा खेल हार के रूप में समाप्त होकर नया खेल शुरू होगा।",switchAndForfeit:"हार मानें और बदलें",cancel:"रद्द करें",opponentSwitchedClock:"प्रतिद्वंद्वी ने समय नियंत्रण बदला। नया खेल शुरू हुआ।"}
+};
+function t(key,values={}){let text=READY_TRANSLATIONS[currentLanguage]?.[key]??CONNECTION_TRANSLATIONS[currentLanguage]?.[key]??FEATURE_TRANSLATIONS[currentLanguage]?.[key]??BEGINNER_TRANSLATIONS[currentLanguage]?.[key]??TRANSLATIONS[currentLanguage]?.[key]??READY_TRANSLATIONS.en[key]??CONNECTION_TRANSLATIONS.en[key]??FEATURE_TRANSLATIONS.en[key]??BEGINNER_TRANSLATIONS.en[key]??TRANSLATIONS.en[key]??key;for(const [name,value]of Object.entries(values))text=text.replace(`{${name}}`,value);return text;}
 function winnerTitle(winner){const templates={en:"{winner} wins",es:"Gana {winner}",fr:"Victoire de {winner}",zh:"{winner}获胜",hi:"{winner} की जीत"};return (templates[currentLanguage]||templates.en).replace("{winner}",winner);}
-function applyLanguage(){document.documentElement.lang=currentLanguage;$("languageSelect").value=currentLanguage;document.querySelectorAll("[data-i18n]").forEach(element=>{element.textContent=t(element.dataset.i18n);});const difficultyKey=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=difficultyKey;$("difficultyLabel").textContent=t(difficultyKey);if(onlineRole==="guest"){$("createInviteButton").textContent=t("retryConnection");$("onlineHelp").textContent=t("guestHelp");}applyPlayerLabels();render();}
+function applyLanguage(){document.documentElement.lang=currentLanguage;$("languageSelect").value=currentLanguage;document.querySelectorAll("[data-i18n]").forEach(element=>{element.textContent=t(element.dataset.i18n);});const difficultyKey=["casual","balanced","sharp"][state.depth-1];$("difficultyLabel").dataset.i18n=difficultyKey;$("difficultyLabel").textContent=t(difficultyKey);if(onlineRole==="guest"){$("createInviteButton").textContent=t("retryConnection");$("onlineHelp").textContent=t("guestHelp");}applyPlayerLabels();render();renderReadyGate();}
 let currentTheme="forest";try{currentTheme=localStorage.getItem("quietKnightTheme")||"forest";state.pieceSet=localStorage.getItem("quietKnightPieces")||"cburnett";}catch{}
 function applyAppearance(){document.body.dataset.theme=currentTheme;document.querySelectorAll("[data-theme]").forEach(button=>button.classList.toggle("active",button.dataset.theme===currentTheme));document.querySelectorAll("[data-pieces]").forEach(button=>button.classList.toggle("active",button.dataset.pieces===state.pieceSet));if(state.board.length)renderBoard();}
 
@@ -80,17 +88,78 @@ function resetGame() {
   const clock=CLOCKS[state.clockChoice];state.clocks={w:clock.seconds,b:clock.seconds};state.lastTick=clock.seconds===null?null:performance.now();
   state.board = START.map(code => code ? { color: code[0], type: code[1] } : null);
   Object.assign(state, { turn: "w", selected: null, legal: [], history: [], lastMove: null, busy: false, over: false, outcome: null, enPassant: null, castling: { wk: true, wq: true, bk: true, bq: true }, halfmove: 0, positions: new Map() });
-  applyPlayerLabels();recordPosition();render();startClock();if(isAiTurn())scheduleAiMove();
+  applyPlayerLabels();recordPosition();render();setupClockGate();renderReadyGate();if(!clockGateActive()){startClock();if(isAiTurn())scheduleAiMove();}
 }
 
 function isAiTurn(){return state.mode==="ai"&&state.turn!==state.playerColor;}
 function isRemoteTurn(){return state.mode==="online"&&(!connection?.open||state.turn!==state.playerColor);}
 function scheduleAiMove(){if(state.over||!isAiTurn())return;state.busy=true;render();aiTimer=setTimeout(()=>{aiTimer=null;updateClock();if(state.over)return;if(state.engineChoice==="local"){const move=chooseLocalAiMove();state.busy=false;if(move)commitMove(move);}else if(stockfishReady)requestStockfishMove();},260);}
-function startClock(){if(state.clocks.w===null||state.mode==="online"&&!connection?.open)return;clockTimer=setInterval(()=>{updateClock();renderClocks();},200);}
+function startClock(){if(state.clocks.w===null||state.mode==="online"&&!connection?.open||clockGateActive())return;clockTimer=setInterval(()=>{updateClock();renderClocks();},200);}
 function updateClock(){
   if(state.lastTick===null||state.over||state.mode==="online"&&!connection?.open)return;
   const now=performance.now(),elapsed=(now-state.lastTick)/1000;state.lastTick=now;state.clocks[state.turn]=Math.max(0,state.clocks[state.turn]-elapsed);
   if(state.clocks[state.turn]<=0){state.outcome={titleKey:"time",textKey:"timeExpired",winner:opposite(state.turn)};state.over=true;state.busy=false;pendingEngineMove=false;if(stockfish)stockfish.postMessage("stop");if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}if(clockTimer){clearInterval(clockTimer);clockTimer=null;}playOutcomeSound(state.outcome);render();}
+}
+
+function needsReadyGate(){return CLOCKS[state.clockChoice].seconds!==null;}
+function clockGateActive(){return needsReadyGate()&&!state.clockReady&&!(state.mode==="online"&&!connection?.open);}
+function setupClockGate(){
+  if(state.mode==="online"&&!connection?.open){state.clockReady=false;return;}
+  if(!needsReadyGate()){state.clockReady=true;state.localReady=true;state.remoteReady=true;return;}
+  state.clockReady=false;state.localReady=false;state.remoteReady=false;
+}
+function activateClock(){
+  state.clockReady=true;state.localReady=true;state.remoteReady=true;hideBoardModal();$("board").classList.remove("gated");render();startClock();if(isAiTurn())scheduleAiMove();
+}
+function markReady(){
+  if(state.localReady)return;state.localReady=true;
+  if(state.mode==="online"){if(connection?.open)connection.send({type:"clockReady"});if(state.remoteReady)activateClock();else renderReadyGate();}
+  else activateClock();
+}
+function renderReadyGate(){
+  const active=clockGateActive();$("board").classList.toggle("gated",active);
+  if(!active){if(!pendingClockSwitch)hideBoardModal();return;}
+  let status="";
+  if(state.mode==="online"){if(state.localReady&&!state.remoteReady)status=t("waitingForOpponentReady");else if(!state.localReady&&state.remoteReady)status=t("opponentReadyWaitingYou");}
+  const label=state.mode==="local"?t("bothReady"):t("readyButton");
+  showBoardModal({title:t("readyTitle"),text:t("readyHelp"),status,buttons:[{label,primary:true,disabled:state.localReady,onClick:markReady}]});
+}
+
+function showBoardModal({title,text,status="",buttons=[]}){
+  $("boardModalTitle").textContent=title;$("boardModalText").textContent=text;
+  const statusEl=$("boardModalStatus");statusEl.textContent=status;statusEl.hidden=!status;
+  const actions=$("boardModalActions");actions.innerHTML="";
+  for(const btn of buttons){const b=document.createElement("button");b.className=btn.primary?"primary-button":"secondary-button";b.textContent=btn.label;b.disabled=!!btn.disabled;b.onclick=btn.onClick;actions.appendChild(b);}
+  $("boardModal").hidden=false;
+}
+function hideBoardModal(){$("boardModal").hidden=true;}
+
+function setBoardNotice(text){const el=$("boardNotice");if(!text){el.hidden=true;el.textContent="";return;}el.textContent=text;el.hidden=false;}
+function showPersistentNotice(text){boardNoticePersistentText=text;if(!boardNoticeTimeout)setBoardNotice(text);}
+function clearPersistentNotice(){boardNoticePersistentText=null;if(!boardNoticeTimeout)setBoardNotice(null);}
+function showToast(text,ms=4000){if(boardNoticeTimeout)clearTimeout(boardNoticeTimeout);setBoardNotice(text);boardNoticeTimeout=setTimeout(()=>{boardNoticeTimeout=null;setBoardNotice(boardNoticePersistentText);},ms);}
+
+function setOpponentDisconnected(flag){$("opponentAvatar").classList.toggle("disconnected",flag);$("connectionState").classList.toggle("disconnected",flag);if(flag)showPersistentNotice(t("opponentDisconnected"));else clearPersistentNotice();}
+function startPeerWatchdog(){
+  stopPeerWatchdog();
+  heartbeatTimer=setInterval(()=>{if(connection?.open)connection.send({type:"ping"});},5000);
+  watchdogTimer=setInterval(()=>{if(!connection?.open)return;if(!peerDisconnected&&Date.now()-lastPeerSeen>13000){peerDisconnected=true;setOpponentDisconnected(true);}},3000);
+}
+function stopPeerWatchdog(){if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}if(watchdogTimer){clearInterval(watchdogTimer);watchdogTimer=null;}}
+
+function applyClockButtonsUI(){document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item.dataset.clock===state.clockChoice));}
+function requestClockChoice(choice){
+  if(!CLOCKS[choice])return;
+  const midGame=state.mode==="online"&&connection?.open&&state.history.length>0&&!state.over&&choice!==state.clockChoice;
+  if(!midGame){setClockChoice(choice);return;}
+  pendingClockSwitch=choice;
+  showBoardModal({title:t("switchTimeControlTitle"),text:t("switchTimeControlText"),buttons:[{label:t("cancel"),onClick:cancelClockSwitch},{label:t("switchAndForfeit"),primary:true,onClick:confirmClockSwitch}]});
+}
+function cancelClockSwitch(){pendingClockSwitch=null;hideBoardModal();}
+function confirmClockSwitch(){
+  const choice=pendingClockSwitch;pendingClockSwitch=null;hideBoardModal();
+  if(connection?.open)connection.send({type:"opponentNotice",key:"opponentSwitchedClock"});
+  setClockChoice(choice);
 }
 
 function attacksSquare(pos, from, target) {
@@ -289,7 +358,7 @@ function commitMove(move, promotion = "q", remote = false) {
 }
 
 function handleSquare(index) {
-  if (state.busy || state.over || isAiTurn() || isRemoteTurn()) return;
+  if (state.busy || state.over || isAiTurn() || isRemoteTurn() || clockGateActive()) return;
   const targetMove=state.legal.find(m=>m.to===index);
   if(targetMove){ if(targetMove.promotion){ showPromotion(targetMove); return; } commitMove(targetMove); return; }
   if(state.board[index]?.color===state.turn){ state.selected=index; state.legal=legalMoves(state).filter(m=>m.from===index); } else { state.selected=null; state.legal=[]; }
@@ -385,20 +454,22 @@ function setMode(mode){
 function setConnectionState(key,connected=false){$("connectionState").textContent=t(key);$("connectionState").classList.toggle("connected",connected);render();}
 function stopConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null;}if(helloTimer){clearInterval(helloTimer);helloTimer=null;}}
 function pauseOnlineClock(){if(clockTimer){clearInterval(clockTimer);clockTimer=null;}state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}
-function closeOnline(){stopConnectionTimer();for(const client of relayClients){client.removeAllListeners();try{client.end(true);}catch{}}if(ntfySocket){ntfySocket.onclose=null;ntfySocket.onerror=null;ntfySocket.close();}if(ntfyEvents)ntfyEvents.close();connection=null;relayClients=[];ntfySocket=null;ntfyEvents=null;ntfyReady=false;onlineRole=null;onlineClientId=null;onlineMessageSeq=0;receivedOnlineMessages.clear();}
+function closeOnline(){stopConnectionTimer();stopPeerWatchdog();peerDisconnected=false;setOpponentDisconnected(false);for(const client of relayClients){client.removeAllListeners();try{client.end(true);}catch{}}if(ntfySocket){ntfySocket.onclose=null;ntfySocket.onerror=null;ntfySocket.close();}if(ntfyEvents)ntfyEvents.close();connection=null;relayClients=[];ntfySocket=null;ntfyEvents=null;ntfyReady=false;onlineRole=null;onlineClientId=null;onlineMessageSeq=0;receivedOnlineMessages.clear();}
 function connectionFailed(){closeOnline();pauseOnlineClock();$("createInviteButton").disabled=false;setConnectionState("connectionFailed");}
 function handleOnlineData(data){
   if(!data||typeof data!=="object")return;
   if(data.type==="move"&&Number.isInteger(data.from)&&Number.isInteger(data.to)){const move=legalMoves(state).find(candidate=>candidate.from===data.from&&candidate.to===data.to);if(move&&state.turn!==state.playerColor){commitMove(move,/^[qrbn]$/.test(data.promotion)?data.promotion:"q",true);if(data.clocks){state.clocks={w:data.clocks.w===null?null:Number(data.clocks.w),b:data.clocks.b===null?null:Number(data.clocks.b)};state.lastTick=state.clocks.w===null?null:performance.now();renderClocks();}}}
   if(data.type==="reset"){if(CLOCKS[data.clockChoice])setClockChoice(data.clockChoice,false);else resetGame();}
+  if(data.type==="clockReady"){state.remoteReady=true;if(state.localReady)activateClock();else renderReadyGate();}
+  if(data.type==="opponentNotice"&&typeof data.key==="string")showToast(t(data.key));
 }
 function connectRelay(room,role,hostColor){
   if(typeof mqtt==="undefined"||!/^[a-zA-Z0-9-]{8,100}$/.test(room)){connectionFailed();return;}
   closeOnline();onlineRole=role;onlineClientId=`qk-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`;
   const topic=`quiet-knight/v1/${room}`,ntfyTopic=`quiet-knight-${room}`,brokers=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
   connection={open:false,send(data){const message=JSON.stringify({...data,sender:onlineClientId,messageId:`${onlineClientId}-${++onlineMessageSeq}`});for(const client of relayClients)if(client.connected)client.publish(topic,message,{qos:1});if(ntfyReady)fetch(`https://ntfy.sh/${ntfyTopic}?firebase=no`,{method:"POST",body:message}).catch(()=>{});},close(){closeOnline();}};
-  const markConnected=()=>{if(connection?.open)return;connection.open=true;stopConnectionTimer();$("createInviteButton").hidden=true;setConnectionState("connected",true);resetGame();};
-  const receive=(_,payload)=>{let data;try{data=JSON.parse(payload.toString());}catch{return;}if(!data||data.sender===onlineClientId||data.messageId&&receivedOnlineMessages.has(data.messageId))return;if(data.messageId){receivedOnlineMessages.add(data.messageId);if(receivedOnlineMessages.size>200)receivedOnlineMessages.delete(receivedOnlineMessages.values().next().value);}if(role==="host"&&data.type==="hello"){markConnected();connection?.send({type:"ready",hostColor});return;}if(role==="guest"&&data.type==="ready"){markConnected();return;}if(connection?.open)handleOnlineData(data);};
+  const markConnected=()=>{if(connection?.open)return;connection.open=true;stopConnectionTimer();$("createInviteButton").hidden=true;setConnectionState("connected",true);applyClockButtonsUI();lastPeerSeen=Date.now();peerDisconnected=false;startPeerWatchdog();resetGame();};
+  const receive=(_,payload)=>{let data;try{data=JSON.parse(payload.toString());}catch{return;}if(!data||data.sender===onlineClientId||data.messageId&&receivedOnlineMessages.has(data.messageId))return;if(data.messageId){receivedOnlineMessages.add(data.messageId);if(receivedOnlineMessages.size>200)receivedOnlineMessages.delete(receivedOnlineMessages.values().next().value);}lastPeerSeen=Date.now();if(peerDisconnected){peerDisconnected=false;setOpponentDisconnected(false);}if(role==="host"&&data.type==="hello"){markConnected();connection?.send({type:"ready",hostColor,clockChoice:state.clockChoice});return;}if(role==="guest"&&data.type==="ready"){if(CLOCKS[data.clockChoice])state.clockChoice=data.clockChoice;markConnected();return;}if(connection?.open)handleOnlineData(data);};
   const ntfyOpened=()=>{ntfyReady=true;if(role==="host"&&!connection?.open)setConnectionState("waitingPlayer");else if(role==="guest"&&!connection?.open)connection.send({type:"hello"});};
   ntfySocket=new WebSocket(`wss://ntfy.sh/${ntfyTopic}/ws?since=10s`);ntfySocket.onmessage=event=>{let envelope;try{envelope=JSON.parse(event.data);}catch{return;}if(envelope.event==="open"){ntfyOpened();return;}if(envelope.event==="message")receive(null,{toString:()=>envelope.message});};ntfySocket.onerror=()=>{console.error("[quiet-knight] ntfy.sh WebSocket relay unreachable (blocked by network/firewall?)");};
   ntfyEvents=new EventSource(`https://ntfy.sh/${ntfyTopic}/sse?since=10s`);ntfyEvents.onopen=ntfyOpened;ntfyEvents.onmessage=event=>{let envelope;try{envelope=JSON.parse(event.data);}catch{return;}if(envelope.event==="message")receive(null,{toString:()=>envelope.message});};ntfyEvents.onerror=()=>{console.error("[quiet-knight] ntfy.sh SSE relay unreachable (blocked by network/firewall?)");};
@@ -410,7 +481,7 @@ function createInvite(){setMode("online");const hostColor=state.onlineSideChoice
 function joinInvite(room,hostColor="w"){setMode("online");hostColor=hostColor==="b"?"b":"w";state.playerColor=opposite(hostColor);state.flipped=state.playerColor==="b";$("createInviteButton").hidden=false;$("createInviteButton").disabled=true;$("createInviteButton").textContent=t("retryConnection");$("createInviteButton").onclick=()=>joinInvite(room,hostColor);$("onlineHelp").textContent=t("guestHelp");setConnectionState("connecting");connectRelay(room,"guest",hostColor);}
 function resetAndShare(){resetGame();if(state.mode==="online"&&connection?.open)connection.send({type:"reset",clockChoice:state.clockChoice});}
 function setClockChoice(choice,share=true){
-  if(!CLOCKS[choice])return;state.clockChoice=choice;document.querySelectorAll("[data-clock]").forEach(item=>item.classList.toggle("active",item.dataset.clock===choice));resetGame();
+  if(!CLOCKS[choice])return;state.clockChoice=choice;applyClockButtonsUI();resetGame();
   if(share&&state.mode==="online"&&connection?.open)connection.send({type:"reset",clockChoice:choice});
 }
 
@@ -422,7 +493,7 @@ document.querySelectorAll("[data-pieces]").forEach(button=>button.onclick=()=>{s
 $("languageSelect").addEventListener("input",event=>{currentLanguage=event.target.value;try{localStorage.setItem("quietKnightLanguage",currentLanguage);}catch{}applyLanguage();});
 document.querySelectorAll("[data-side]").forEach(button=>button.onclick=()=>{if(state.mode==="online")state.onlineSideChoice=button.dataset.side;else state.sideChoice=button.dataset.side;document.querySelectorAll("[data-side]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
 document.querySelectorAll("[data-engine]").forEach(button=>button.onclick=()=>{state.engineChoice=button.dataset.engine;state.engineError=false;document.querySelectorAll("[data-engine]").forEach(item=>item.classList.toggle("active",item===button));resetGame();});
-document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>setClockChoice(button.dataset.clock));
+document.querySelectorAll("[data-clock]").forEach(button=>button.onclick=()=>requestClockChoice(button.dataset.clock));
 function openRules(){$("rulesOverlay").hidden=false;document.body.classList.add("rules-open");$("closeRulesButton").focus();}
 function closeRules(){$("rulesOverlay").hidden=true;document.body.classList.remove("rules-open");$("rulesButton").focus();}
 $("rulesButton").onclick=openRules;$("closeRulesButton").onclick=closeRules;$("rulesOverlay").onclick=event=>{if(event.target===$("rulesOverlay"))closeRules();};

@@ -82,6 +82,18 @@ button { color: inherit; }
 .promotion-dialog > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .promotion-dialog button { aspect-ratio: 1; border: 1px solid var(--line); background: #2a2e2b; cursor: pointer; }
 .promotion-dialog button img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.board.gated { filter: brightness(.55); pointer-events: none; }
+.board-notice { position: absolute; z-index: 4; left: 0; right: 0; top: 0; padding: 9px 12px; background: #d65c57e6; color: #1c1615; font-size: 12px; font-weight: 750; text-align: center; }
+.board-modal { position: absolute; z-index: 6; inset: 0; display: grid; place-items: center; padding: 20px; background: #0b0d0ccc; backdrop-filter: blur(2px); text-align: center; }
+.board-modal-card { width: min(320px, 100%); padding: 22px; background: #202421; border: 1px solid #454b47; box-shadow: 0 20px 60px #0009; }
+.board-modal-card h3 { margin: 0 0 8px; font-size: 17px; }
+.board-modal-card p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.board-modal-status { margin: 0 0 14px; color: var(--accent); font-size: 12px; font-weight: 700; }
+.board-modal-actions { display: flex; gap: 8px; }
+.board-modal-actions button { flex: 1; }
+.avatar.disconnected { position: relative; box-shadow: 0 0 0 2px var(--danger); }
+.avatar.disconnected::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px #141615; }
+.connection-state.disconnected { color: var(--danger); }
 .control-panel { min-width: 0; border-left: 1px solid var(--line); padding-left: clamp(28px, 4vw, 46px); }
 .status-block { min-height: 100px; }
 .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }

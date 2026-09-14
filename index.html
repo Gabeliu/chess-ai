@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151716">
   <title>Quiet Knight - Local Chess</title>
-  <link rel="stylesheet" href="styles.css?v=20260823-5">
+  <link rel="stylesheet" href="styles.css?v=20260915-1">
 </head>
 <body>
   <main class="app-shell">
@@ -36,9 +36,18 @@
 
         <div class="board-wrap">
           <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+          <div class="board-notice" id="boardNotice" hidden></div>
           <div class="promotion-dialog" id="promotionDialog" hidden>
             <p data-i18n="promotePawn">Promote pawn</p>
             <div id="promotionChoices"></div>
+          </div>
+          <div class="board-modal" id="boardModal" hidden>
+            <div class="board-modal-card">
+              <h3 id="boardModalTitle"></h3>
+              <p id="boardModalText"></p>
+              <div class="board-modal-status" id="boardModalStatus" hidden></div>
+              <div class="board-modal-actions" id="boardModalActions"></div>
+            </div>
           </div>
         </div>
 
@@ -177,6 +186,6 @@
     </section>
   </div>
   <script src="assets/vendor/mqtt.min.js"></script>
-  <script src="app.js?v=20260823-11"></script>
+  <script src="app.js?v=20260915-1"></script>
 </body>
 </html>

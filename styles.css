@@ -119,7 +119,10 @@ button { color: inherit; }
 .engine-options { grid-template-columns: repeat(2, 1fr); }
 .time-options { grid-template-columns: repeat(4, 1fr); }
 .difficulty-options { grid-template-columns: repeat(3, 1fr); }
-.puzzle-setting .game-actions { margin-top: 14px; }
+.puzzle-setting .game-actions { margin-top: 14px; flex-wrap: wrap; }
+.solution-nav { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.solution-nav span { flex: 1; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; }
+.material-lead { margin-left: 6px; color: var(--accent); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .appearance-setting { padding-top: 1px; }
 .appearance-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; align-items: center; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .theme-options { display: flex; gap: 8px; }

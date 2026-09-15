@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151716">
   <title>Quiet Knight - Local Chess</title>
-  <link rel="stylesheet" href="styles.css?v=20260915-2">
+  <link rel="stylesheet" href="styles.css?v=20260915-3">
 </head>
 <body>
   <main class="app-shell">
@@ -84,7 +84,14 @@
           </div>
           <div class="game-actions">
             <button class="secondary-button" id="puzzleHintButton" data-i18n="hint">Hint</button>
+            <button class="secondary-button" id="puzzleSolutionButton" data-i18n="showSolution">Show solution</button>
             <button class="primary-button" id="puzzleNewButton" data-i18n="newPuzzle">New puzzle</button>
+          </div>
+          <div class="solution-nav" id="solutionNav" hidden>
+            <button class="icon-button bordered" id="solutionPrevButton" aria-label="Previous step">←</button>
+            <span id="solutionStepLabel">0 / 0</span>
+            <button class="icon-button bordered" id="solutionNextButton" aria-label="Next step">→</button>
+            <button class="secondary-button" id="solutionExitButton" data-i18n="backToPuzzle">Back to puzzle</button>
           </div>
         </div>
 
@@ -201,6 +208,6 @@
     </section>
   </div>
   <script src="assets/vendor/mqtt.min.js"></script>
-  <script src="app.js?v=20260915-2"></script>
+  <script src="app.js?v=20260915-3"></script>
 </body>
 </html>

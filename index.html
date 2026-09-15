@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151716">
   <title>Quiet Knight - Local Chess</title>
-  <link rel="stylesheet" href="styles.css?v=20260915-1">
+  <link rel="stylesheet" href="styles.css?v=20260915-2">
 </head>
 <body>
   <main class="app-shell">
@@ -71,6 +71,21 @@
           <button class="mode-tab active" id="aiMode" role="tab" aria-selected="true" data-i18n="vsAi">Vs AI</button>
           <button class="mode-tab" id="localMode" role="tab" aria-selected="false" data-i18n="twoPlayers">Two players</button>
           <button class="mode-tab" id="onlineMode" role="tab" aria-selected="false" data-i18n="online">Online</button>
+          <button class="mode-tab" id="puzzleMode" role="tab" aria-selected="false" data-i18n="puzzles">Puzzles</button>
+        </div>
+
+        <div class="setting puzzle-setting" id="puzzleSetting" hidden>
+          <div class="setting-heading"><span data-i18n="puzzles">Puzzles</span><span id="puzzleStats">0 solved</span></div>
+          <p class="setting-help" id="puzzleObjective">Find the best move for White.</p>
+          <div class="option-group difficulty-options" role="group" aria-label="Puzzle difficulty">
+            <button class="option-button active" data-puzzle-difficulty="easy" data-i18n="easy">Easy</button>
+            <button class="option-button" data-puzzle-difficulty="medium" data-i18n="medium">Medium</button>
+            <button class="option-button" data-puzzle-difficulty="hard" data-i18n="hard">Hard</button>
+          </div>
+          <div class="game-actions">
+            <button class="secondary-button" id="puzzleHintButton" data-i18n="hint">Hint</button>
+            <button class="primary-button" id="puzzleNewButton" data-i18n="newPuzzle">New puzzle</button>
+          </div>
         </div>
 
         <div class="setting online-setting" id="onlineSetting" hidden>
@@ -103,7 +118,7 @@
           <div class="range-labels"><span data-i18n="casual">Casual</span><span data-i18n="sharp">Sharp</span></div>
         </div>
 
-        <div class="setting clock-setting">
+        <div class="setting clock-setting" id="clockSetting">
           <div class="setting-heading"><span data-i18n="timeControl">Time control</span></div>
           <div class="option-group time-options" role="group" aria-label="Choose time control">
             <button class="option-button" data-clock="bullet">1+0</button>
@@ -124,7 +139,7 @@
           <div class="move-list empty" id="moveList"><span data-i18n="emptyHistory">Your game record will appear here.</span></div>
         </div>
 
-        <div class="game-actions">
+        <div class="game-actions" id="gameActions">
           <button class="primary-button" id="newGameButton"><span aria-hidden="true">↻</span> <span data-i18n="newGame">New game</span></button>
           <button class="secondary-button" id="undoButton" disabled title="Undo last turn"><span aria-hidden="true">↶</span> <span data-i18n="undo">Undo</span></button>
           <button class="icon-button bordered" id="flipButton" title="Flip board" aria-label="Flip board">⇅</button>
@@ -186,6 +201,6 @@
     </section>
   </div>
   <script src="assets/vendor/mqtt.min.js"></script>
-  <script src="app.js?v=20260915-1"></script>
+  <script src="app.js?v=20260915-2"></script>
 </body>
 </html>

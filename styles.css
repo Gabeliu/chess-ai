@@ -94,12 +94,15 @@ button { color: inherit; }
 .avatar.disconnected { position: relative; box-shadow: 0 0 0 2px var(--danger); }
 .avatar.disconnected::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px #141615; }
 .connection-state.disconnected { color: var(--danger); }
+.square.puzzle-correct { box-shadow: inset 0 0 0 999px #3fae4f5c; }
+.square.puzzle-wrong { box-shadow: inset 0 0 0 999px #d65c575c; }
+.square.puzzle-hint { box-shadow: inset 0 0 0 4px #f0c95fcc; }
 .control-panel { min-width: 0; border-left: 1px solid var(--line); padding-left: clamp(28px, 4vw, 46px); }
 .status-block { min-height: 100px; }
 .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }
 .status-block h1 { margin: 10px 0 5px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 44px); font-weight: 500; line-height: 1.05; }
 .status-block p { margin: 0; color: var(--muted); font-size: 14px; }
-.mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); margin: 27px 0 24px; border-bottom: 1px solid var(--line); }
+.mode-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 27px 0 24px; border-bottom: 1px solid var(--line); }
 .mode-tab { padding: 12px 8px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; color: var(--muted); font-weight: 650; font-size: 13px; }
 .mode-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
 .setting { margin-bottom: 26px; }
@@ -115,6 +118,8 @@ button { color: inherit; }
 .side-options { grid-template-columns: repeat(3, 1fr); }
 .engine-options { grid-template-columns: repeat(2, 1fr); }
 .time-options { grid-template-columns: repeat(4, 1fr); }
+.difficulty-options { grid-template-columns: repeat(3, 1fr); }
+.puzzle-setting .game-actions { margin-top: 14px; }
 .appearance-setting { padding-top: 1px; }
 .appearance-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; align-items: center; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .theme-options { display: flex; gap: 8px; }
